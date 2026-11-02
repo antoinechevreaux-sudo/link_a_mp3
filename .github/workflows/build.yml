@@ -20,6 +20,20 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Compilar QuickJS (motor JavaScript que yt-dlp necesita para YouTube)
+        run: |
+          git clone --depth 1 --branch v0.18.0 https://github.com/quickjs-ng/quickjs qjs-src
+          NDK="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          echo "NDK: $NDK"
+          for abi in arm64-v8a armeabi-v7a; do
+            cmake -S qjs-src -B "qjs-build-$abi" \
+              -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
+              -DANDROID_ABI=$abi -DANDROID_PLATFORM=android-29 -DCMAKE_BUILD_TYPE=Release
+            cmake --build "qjs-build-$abi" --target qjs_exe -j4
+            mkdir -p "app/src/main/jniLibs/$abi"
+            cp "qjs-build-$abi/qjs" "app/src/main/jniLibs/$abi/libqjs.so"
+          done
+          file app/src/main/jniLibs/*/libqjs.so
       - name: Compilar
         run: gradle :app:assembleRelease --stacktrace
       - name: Preparar APK

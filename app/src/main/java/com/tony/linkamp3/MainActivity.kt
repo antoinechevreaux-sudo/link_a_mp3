@@ -175,7 +175,7 @@ class MainActivity : Activity() {
         Thread {
             val txt = try {
                 Engine.ensureInit(this)
-                "Motor: yt-dlp ${Engine.version(this) ?: "?"}"
+                "Motor: yt-dlp ${(Engine.version(this) ?: "?").removePrefix("yt-dlp").trim()}"
             } catch (e: Throwable) {
                 "Error al preparar el motor: ${e.message}"
             }

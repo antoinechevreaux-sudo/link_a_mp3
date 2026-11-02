@@ -174,6 +174,12 @@ class DownloadService : Service() {
             r.addOption("--no-playlist")
             r.addOption("-o", File(dir, single).absolutePath)
         }
+        // Motor JavaScript incluido en la app: YouTube lo exige para resolver sus desafíos
+        val qjs = File(applicationInfo.nativeLibraryDir, "libqjs.so")
+        if (qjs.exists()) {
+            r.addOption("--js-runtimes", "quickjs:${qjs.absolutePath}")
+            r.addOption("--remote-components", "ejs:github")
+        }
         r.addOption("--embed-metadata")
         r.addOption("--no-mtime")
         r.addOption("--windows-filenames")
@@ -246,7 +252,10 @@ class DownloadService : Service() {
 
     private fun friendlyError(e: Throwable): String {
         val raw = (e.message ?: e.toString())
-        val line = errorLine(raw).ifBlank { raw.lines().firstOrNull { it.isNotBlank() }.orEmpty() }
+        val line = errorLine(raw).ifBlank {
+            raw.lines().map { it.trim() }.lastOrNull { it.isNotBlank() && !it.startsWith("WARNING") }
+                ?: raw.lines().firstOrNull { it.isNotBlank() }.orEmpty()
+        }
         val lower = raw.lowercase()
         return when {
             "unsupported url" in lower -> "Este sitio no es compatible"
