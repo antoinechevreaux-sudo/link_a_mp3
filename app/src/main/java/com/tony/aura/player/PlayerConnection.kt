@@ -70,6 +70,13 @@ object PlayerConnection {
         }, ContextCompat.getMainExecutor(ctx))
     }
 
+    /** Para la reproducción y vacía la cola (al cerrar la app). */
+    fun stopAll() {
+        controller?.let { it.stop(); it.clearMediaItems() }
+        queue = emptyList()
+        _ui.value = PlayerUi()
+    }
+
     fun disconnect() {
         controller?.removeListener(listener)
         controller?.release()

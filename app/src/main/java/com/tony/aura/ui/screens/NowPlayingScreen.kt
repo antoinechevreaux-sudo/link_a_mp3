@@ -5,6 +5,19 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -198,40 +211,104 @@ fun SeekBar(p: PlayerUi, light: Boolean = false) {
     var dragValue by remember { mutableFloatStateOf(0f) }
     val dur = p.durationMs.coerceAtLeast(1L).toFloat()
     val value = if (dragging) dragValue else (p.positionMs / dur).coerceIn(0f, 1f)
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Slider(
-            value = value,
-            onValueChange = { dragging = true; dragValue = it },
-            onValueChangeFinished = { PlayerConnection.seekTo((dragValue * dur).toLong()); dragging = false },
-            colors = SliderDefaults.colors(
-                thumbColor = Color.White, activeTrackColor = Aura.Brand500,
-                inactiveTrackColor = if (light) Color.White.copy(alpha = 0.25f) else Aura.Slate800,
-            ),
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+        ThinSeekBar(
+            fraction = value,
+            onScrub = { dragging = true; dragValue = it },
+            onSeekEnd = { f -> PlayerConnection.seekTo((f * dur).toLong()); dragging = false },
+            activeColor = if (light) Color.White else Aura.Brand500,
+            inactiveColor = if (light) Color.White.copy(alpha = 0.28f) else Aura.Slate700,
         )
         Row(Modifier.fillMaxWidth()) {
-            Text(formatTime(if (dragging) (dragValue * dur).toLong() else p.positionMs), color = Aura.Slate400,
-                fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text(formatTime(if (dragging) (dragValue * dur).toLong() else p.positionMs), color = if (light) Color.White else Aura.Slate400,
+                fontFamily = Jakarta, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
             Spacer(Modifier.weight(1f))
-            Text(formatTime(p.durationMs), color = Aura.Slate400, fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text(formatTime(p.durationMs), color = if (light) Color.White else Aura.Slate400, fontFamily = Jakarta,
+                fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
         }
     }
 }
 
-/** Botón de salto de 15 s (icono circular con el número). */
+/** Barra de progreso fina (línea de 3 dp con un punto blanco), arrastrable o con toque. */
 @Composable
-fun SkipButton(forward: Boolean, size: Dp = 48.dp, onClick: () -> Unit) {
-    Box(Modifier.size(size).clip(CircleShape).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Box(Modifier.size(size * 0.72f).border(2.dp, Aura.Slate200, CircleShape), contentAlignment = Alignment.Center) {
-            Text("15", color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.ExtraBold, fontSize = (size.value * 0.27f).sp)
+fun ThinSeekBar(
+    fraction: Float,
+    onScrub: (Float) -> Unit,
+    onSeekEnd: (Float) -> Unit,
+    activeColor: Color,
+    inactiveColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    var dragging by remember { mutableStateOf(false) }
+    val scrub by rememberUpdatedState(onScrub)
+    val end by rememberUpdatedState(onSeekEnd)
+    Canvas(
+        modifier.fillMaxWidth().height(26.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { o ->
+                    val f = (o.x / size.width).coerceIn(0f, 1f)
+                    scrub(f); end(f)
+                }
+            }
+            .pointerInput(Unit) {
+                var cur = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { o -> dragging = true; cur = (o.x / size.width).coerceIn(0f, 1f); scrub(cur) },
+                    onDragEnd = { dragging = false; end(cur) },
+                    onDragCancel = { dragging = false; end(cur) },
+                    onHorizontalDrag = { change, dx ->
+                        change.consume()
+                        cur = (cur + dx / size.width).coerceIn(0f, 1f); scrub(cur)
+                    },
+                )
+            },
+    ) {
+        val y = size.height / 2
+        val th = (if (dragging) 4.dp else 3.dp).toPx()
+        val x = size.width * fraction.coerceIn(0f, 1f)
+        drawLine(inactiveColor, Offset(0f, y), Offset(size.width, y), th, StrokeCap.Round)
+        drawLine(activeColor, Offset(0f, y), Offset(x, y), th, StrokeCap.Round)
+        drawCircle(Color.White, radius = (if (dragging) 8.dp else 6.dp).toPx(), center = Offset(x, y))
+    }
+}
+
+/** Botón de salto de 15 s: flecha circular fina con el número dentro (como en YouTube). */
+@Composable
+fun SkipButton(forward: Boolean, size: Dp = 48.dp, tint: Color = Color.White, onClick: () -> Unit) {
+    Box(
+        Modifier.size(size).clip(CircleShape).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.size(size * 0.78f)) {
+            val s = this.size.minDimension
+            val c = Offset(this.size.width / 2, this.size.height / 2)
+            val r = s * 0.40f
+            val w = s * 0.075f
+            val start = -75f
+            scale(scaleX = if (forward) -1f else 1f, scaleY = 1f, pivot = c) {
+                drawArc(
+                    color = tint, startAngle = start, sweepAngle = 285f, useCenter = false,
+                    topLeft = Offset(c.x - r, c.y - r), size = Size(r * 2, r * 2),
+                    style = Stroke(width = w, cap = StrokeCap.Round),
+                )
+                // Punta de flecha en el inicio del arco, apuntando hacia atrás
+                val a = Math.toRadians(start.toDouble())
+                val px = c.x + r * cos(a).toFloat()
+                val py = c.y + r * sin(a).toFloat()
+                val dx = sin(a).toFloat(); val dy = -cos(a).toFloat()      // tangente
+                val nx = cos(a).toFloat(); val ny = sin(a).toFloat()       // normal
+                val len = s * 0.16f
+                val path = Path().apply {
+                    moveTo(px + dx * len, py + dy * len)
+                    lineTo(px + nx * len * 0.75f, py + ny * len * 0.75f)
+                    lineTo(px - nx * len * 0.75f, py - ny * len * 0.75f)
+                    close()
+                }
+                drawPath(path, tint)
+            }
         }
-        Box(
-            Modifier.align(if (forward) Alignment.TopEnd else Alignment.TopStart).padding(top = size * 0.08f, start = size * 0.1f, end = size * 0.1f)
-                .size(size * 0.22f).clip(CircleShape).background(Aura.Brand500),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(if (forward) "+" else "−", color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Black,
-                fontSize = (size.value * 0.18f).sp)
-        }
+        Text("15", Modifier.padding(top = size * 0.06f), color = tint, fontFamily = Jakarta, fontWeight = FontWeight.ExtraBold,
+            fontSize = (size.value * 0.26f).sp)
     }
 }
 

@@ -10,6 +10,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -148,30 +150,35 @@ fun VideoScreen(onClose: () -> Unit) {
             )) {
                 // Barra superior
                 Row(Modifier.fillMaxWidth().safeDrawingPadding().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    RoundButton(Icons.Rounded.KeyboardArrowDown, onClose, size = 40.dp, contentDescription = "Salir")
+                    PlainIcon(Icons.Rounded.KeyboardArrowDown, 26.dp, Color.White) { onClose() }
                     Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                         Text(p.current?.title ?: "", color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.ExtraBold,
-                            fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(p.current?.artist ?: "", color = Aura.Slate300, fontFamily = Jakarta, fontSize = 12.sp, maxLines = 1)
                     }
-                    AuraChip(speedLabel(p.speed), p.speed != 1f, { showSpeeds = !showSpeeds; touch++ }, Icons.Rounded.Speed)
-                    Spacer(Modifier.width(8.dp))
-                    RoundButton(Icons.Rounded.ScreenRotation, { landscape = !landscape; touch++ }, size = 40.dp, contentDescription = "Girar")
+                    SpeedPill(speedLabel(p.speed), p.speed != 1f) { showSpeeds = !showSpeeds; touch++ }
+                    Spacer(Modifier.width(6.dp))
+                    PlainIcon(Icons.Rounded.ScreenRotation, 22.dp, Color.White) { landscape = !landscape; touch++ }
                 }
                 // Controles centrales
                 Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                    PlainIcon(Icons.Rounded.SkipPrevious, 32.dp, Color.White) { PlayerConnection.previous(); touch++ }
-                    SkipButton(false, 56.dp) { PlayerConnection.back15(); touch++ }
-                    RoundButton(if (p.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, { PlayerConnection.togglePlay(); touch++ },
-                        size = 72.dp, iconSize = 38.dp, primary = true)
-                    SkipButton(true, 56.dp) { PlayerConnection.forward15(); touch++ }
-                    PlainIcon(Icons.Rounded.SkipNext, 32.dp, Color.White) { PlayerConnection.next(); touch++ }
+                    horizontalArrangement = Arrangement.spacedBy(64.dp)) {
+                    SkipButton(false, 52.dp) { PlayerConnection.back15(); touch++ }
+                    // Botón blanco como en YouTube
+                    Box(
+                        Modifier.size(64.dp).clip(CircleShape).background(Color.White)
+                            .clickable { PlayerConnection.togglePlay(); touch++ },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(if (p.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, "Reproducir",
+                            tint = Color.Black, modifier = Modifier.size(34.dp))
+                    }
+                    SkipButton(true, 52.dp) { PlayerConnection.forward15(); touch++ }
                 }
                 // Velocidades y barra de progreso
                 Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp, vertical = 8.dp)) {
-                    if (showSpeeds) LazyRow(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(PlayerConnection.SPEEDS) { s -> AuraChip(speedLabel(s), s == p.speed, { PlayerConnection.setSpeed(s); touch++ }) }
+                    if (showSpeeds) LazyRow(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(PlayerConnection.SPEEDS) { s -> SpeedPill(speedLabel(s), s == p.speed) { PlayerConnection.setSpeed(s); touch++ } }
                     }
                     SeekBar(p, light = true)
                 }
@@ -180,3 +187,16 @@ fun VideoScreen(onClose: () -> Unit) {
     }
 }
 
+
+/** Píldora de velocidad compacta para la pantalla completa. */
+@Composable
+private fun SpeedPill(text: String, selected: Boolean, onClick: () -> Unit) {
+    Text(
+        text,
+        Modifier.clip(CircleShape)
+            .background(if (selected) Aura.Brand500 else Color.White.copy(alpha = 0.16f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+    )
+}

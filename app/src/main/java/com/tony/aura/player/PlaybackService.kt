@@ -53,9 +53,10 @@ class PlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
+    // Al cerrar la app desde recientes, la música se detiene
     override fun onTaskRemoved(rootIntent: Intent?) {
-        val p = session?.player
-        if (p == null || !p.playWhenReady || p.mediaItemCount == 0) stopSelf()
+        session?.player?.let { it.pause(); it.stop(); it.clearMediaItems() }
+        stopSelf()
     }
 
     override fun onDestroy() {

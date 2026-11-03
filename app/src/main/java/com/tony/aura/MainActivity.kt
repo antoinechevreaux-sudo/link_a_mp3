@@ -68,7 +68,12 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        if (isFinishing) PlayerConnection.disconnect()
+        // Al salir de la app (atrás o cerrar), la música se detiene
+        if (isFinishing && !isChangingConfigurations) {
+            PlayerConnection.stopAll()
+            PlayerConnection.disconnect()
+            stopService(Intent(this, com.tony.aura.player.PlaybackService::class.java))
+        }
         super.onDestroy()
     }
 
