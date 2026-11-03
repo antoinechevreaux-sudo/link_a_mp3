@@ -40,6 +40,7 @@ object Ambient {
             AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),
             false, // no pide el foco de audio: así no pausa al principal
         )
+        .setWakeMode(C.WAKE_MODE_LOCAL) // mantiene la CPU despierta con la pantalla apagada
         .build()
         .also { p ->
             p.repeatMode = Player.REPEAT_MODE_ONE
@@ -47,6 +48,7 @@ object Ambient {
             p.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     _state.update { it.copy(playing = isPlaying) }
+                    AmbientService.instance?.refresh()
                 }
             })
             player = p
@@ -56,13 +58,35 @@ object Ambient {
         val p = player()
         p.setMediaItem(MediaItem.fromUri(Uri.parse(track.uri)))
         p.prepare()
+        p.volume = _state.value.volume
         p.play()
         _state.update { it.copy(track = track) }
+        AmbientService.start(app)
     }
 
     fun toggle() {
         val p = player ?: return
-        if (p.isPlaying) p.pause() else p.play()
+        if (p.isPlaying) p.pause() else { p.play(); AmbientService.start(app) }
+    }
+
+    /** Baja el volumen del fondo durante ~10 s y lo pausa (lo usa el temporizador). */
+    fun fadeOutAndStop(onDone: () -> Unit) {
+        val p = player ?: run { onDone(); return }
+        val start = _state.value.volume
+        val h = android.os.Handler(android.os.Looper.getMainLooper())
+        var i = 0
+        val steps = 20
+        h.post(object : Runnable {
+            override fun run() {
+                i++
+                p.volume = start * (1f - i / steps.toFloat())
+                if (i < steps) h.postDelayed(this, 500) else {
+                    p.pause(); p.volume = start
+                    AmbientService.stop(app)
+                    onDone()
+                }
+            }
+        })
     }
 
     fun setVolume(v: Float) {
@@ -79,16 +103,25 @@ object Ambient {
 
     fun setLinked(linked: Boolean) { _state.update { it.copy(linked = linked) } }
 
-    /** Lo llama el reproductor principal cuando empieza o se pausa. */
-    fun onMainPlaying(isPlaying: Boolean) {
+    /**
+     * Lo llama el reproductor principal cuando el usuario pausa o reanuda (o entra una llamada).
+     * Cuando la pista principal simplemente termina, el fondo sigue sonando.
+     */
+    fun onMainPlayWhenReady(playWhenReady: Boolean, reason: Int) {
         val s = _state.value
         val p = player ?: return
         if (!s.linked || s.track == null) return
-        if (isPlaying && !p.isPlaying) p.play()
-        if (!isPlaying && p.isPlaying) p.pause()
+        val follow = reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST ||
+            reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS ||
+            reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY ||
+            reason == Player.PLAY_WHEN_READY_CHANGE_REASON_REMOTE
+        if (!follow) return
+        if (playWhenReady && !p.isPlaying) { p.play(); AmbientService.start(app) }
+        if (!playWhenReady && p.isPlaying) p.pause()
     }
 
     fun clear() {
+        AmbientService.stop(app)
         player?.release()
         player = null
         _state.update { State(volume = it.volume, mainVolume = it.mainVolume, linked = it.linked) }

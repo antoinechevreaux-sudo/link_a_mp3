@@ -26,6 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
@@ -66,6 +68,7 @@ import com.tony.aura.data.Library
 import com.tony.aura.data.Track
 import com.tony.aura.download.DownloadService
 import com.tony.aura.player.Ambient
+import com.tony.aura.player.SleepTimer
 import com.tony.aura.player.PlayerConnection
 import com.tony.aura.data.DeviceMusic
 import com.tony.aura.ui.LocalUi
@@ -340,6 +343,70 @@ fun AmbientPickerSheet(onDismiss: () -> Unit) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Cuenta atrás del temporizador en formato mm:ss (se actualiza cada segundo). */
+@Composable
+fun rememberTimerLabel(): String? {
+    val t by SleepTimer.state.collectAsState()
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    androidx.compose.runtime.LaunchedEffect(t.endsAt) {
+        while (t.endsAt > 0) { now = System.currentTimeMillis(); kotlinx.coroutines.delay(1000) }
+    }
+    return when {
+        t.endOfTrack -> "Fin"
+        t.endsAt > 0 -> formatTime((t.endsAt - now).coerceAtLeast(0))
+        else -> null
+    }
+}
+
+@Composable
+fun SleepTimerSheet(onDismiss: () -> Unit) {
+    val ui = LocalUi.current
+    val t by SleepTimer.state.collectAsState()
+    val amb by Ambient.state.collectAsState()
+    val label = rememberTimerLabel()
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Aura.Elevated,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 12.dp)) {
+            Kicker("Temporizador")
+            Text("Apagar el reproductor", color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Black, fontSize = 22.sp)
+            if (t.active) Text(
+                if (t.endOfTrack) "Se apagará al terminar este episodio" else "Se apaga en $label (a las ${SleepTimer.endsAtLabel()})",
+                color = Aura.Brand400, fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Spacer(Modifier.height(10.dp))
+            listOf(15 to "15 minutos", 30 to "30 minutos", 45 to "45 minutos", 60 to "1 hora", 120 to "2 horas").forEach { (m, txt) ->
+                SheetItem(Icons.Rounded.Bedtime, txt, tint = if (t.minutes == m) Aura.Brand400 else Aura.Slate200) {
+                    SleepTimer.startMinutes(m); ui.toast("Se apagará en $txt"); onDismiss()
+                }
+            }
+            SheetItem(Icons.Rounded.Bedtime, "Al final del episodio", tint = if (t.endOfTrack) Aura.Brand400 else Aura.Slate200) {
+                SleepTimer.startEndOfTrack(); ui.toast("Se apagará al terminar este episodio"); onDismiss()
+            }
+            if (amb.track != null) Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { SleepTimer.setIncludeAmbient(!t.includeAmbient) }
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Apagar también el sonido de fondo", color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text(if (t.includeAmbient) "Se apaga todo" else "La lluvia sigue sonando", color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp)
+                }
+                androidx.compose.material3.Switch(
+                    checked = t.includeAmbient, onCheckedChange = { SleepTimer.setIncludeAmbient(it) },
+                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                        checkedThumbColor = Color.White, checkedTrackColor = Aura.Brand500, checkedBorderColor = Aura.Brand500,
+                        uncheckedThumbColor = Aura.Slate400, uncheckedTrackColor = Aura.Slate900, uncheckedBorderColor = Aura.Border,
+                    ),
+                )
+            }
+            if (t.active) SheetItem(Icons.Rounded.Close, "Cancelar temporizador", tint = Aura.Brand400) {
+                SleepTimer.cancel(); ui.toast("Temporizador cancelado"); onDismiss()
             }
         }
     }

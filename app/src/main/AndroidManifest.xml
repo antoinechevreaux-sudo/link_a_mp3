@@ -46,6 +46,11 @@
         </service>
 
         <service
+            android:name=".player.AmbientService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <service
             android:name=".download.DownloadService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

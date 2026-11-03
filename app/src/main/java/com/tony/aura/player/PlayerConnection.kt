@@ -46,9 +46,14 @@ object PlayerConnection {
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) = refresh()
-        override fun onIsPlayingChanged(isPlaying: Boolean) = Ambient.onMainPlaying(isPlaying)
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) =
+            Ambient.onMainPlayWhenReady(playWhenReady, reason)
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             mediaItem?.mediaId?.let { Library.markPlayed(it) }
+            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) SleepTimer.onTrackEnded()
+        }
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) SleepTimer.onTrackEnded()
         }
         override fun onPlayerError(error: PlaybackException) {
             _ui.value = _ui.value.copy(error = "No se puede reproducir: ${error.errorCodeName}")
@@ -76,6 +81,7 @@ object PlayerConnection {
     fun stopAll() {
         controller?.let { it.stop(); it.clearMediaItems() }
         Ambient.clear()
+        SleepTimer.cancel()
         queue = emptyList()
         _ui.value = PlayerUi()
     }

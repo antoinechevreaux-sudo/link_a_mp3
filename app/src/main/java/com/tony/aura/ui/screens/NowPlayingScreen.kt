@@ -26,6 +26,8 @@ import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import com.tony.aura.player.Ambient
+import com.tony.aura.ui.components.rememberTimerLabel
+import androidx.compose.material.icons.rounded.Bedtime
 import com.tony.aura.ui.components.AuraCard
 import com.tony.aura.ui.components.Kicker
 import androidx.compose.foundation.border
@@ -192,6 +194,8 @@ fun NowPlayingScreen() {
                 horizontalArrangement = Arrangement.SpaceBetween) {
                 PlainIcon(Icons.Rounded.Shuffle, 22.dp, if (p.shuffle) Aura.Brand500 else Aura.Slate400) { PlayerConnection.toggleShuffle() }
                 AuraChip(speedLabel(p.speed), p.speed != 1f, { showSpeeds = !showSpeeds }, Icons.Rounded.Speed)
+                val timer = rememberTimerLabel()
+                AuraChip(timer ?: "Apagar", timer != null, { ui.pickTimer = true }, Icons.Rounded.Bedtime)
                 if (t.isVideo) GhostButton("Pantalla completa", { ui.videoFullscreen = true }, icon = Icons.Rounded.Fullscreen)
                 PlainIcon(
                     if (p.repeatMode == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, 22.dp,
