@@ -1,16 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="fondo">#14171F</color>
-    <color name="tarjeta">#1D212C</color>
-    <color name="linea">#2C3242</color>
-    <color name="campo">#12151C</color>
-    <color name="texto">#EEF0F5</color>
-    <color name="gris">#9AA3B5</color>
-    <color name="acento">#FF7A45</color>
-    <color name="acento_claro">#FFB08F</color>
-    <color name="sobre_acento">#1A0D06</color>
-    <color name="secundario">#2A3040</color>
-    <color name="ok">#4FD18B</color>
-    <color name="error">#FF6B6B</color>
-    <color name="icono_fondo">#FF7A45</color>
+    <color name="icono_fondo">#FF0B0F19</color>
 </resources>

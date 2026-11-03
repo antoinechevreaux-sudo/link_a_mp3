@@ -1,0 +1,97 @@
+package com.tony.aura
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.remember
+import com.tony.aura.data.DeviceMusic
+import com.tony.aura.player.PlayerConnection
+import com.tony.aura.ui.AuraRoot
+import com.tony.aura.ui.LocalUi
+import com.tony.aura.ui.Tab
+import com.tony.aura.ui.UiState
+import com.tony.aura.ui.theme.AuraTheme
+import androidx.compose.runtime.CompositionLocalProvider
+
+class MainActivity : ComponentActivity() {
+
+    private val ui = UiState()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
+        super.onCreate(savedInstanceState)
+        PlayerConnection.connect(this)
+        askPermissions()
+        handleIntent(intent)
+        setContent {
+            AuraTheme {
+                CompositionLocalProvider(LocalUi provides remember { ui }) {
+                    AuraRoot()
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        PlayerConnection.connect(this)
+        if (hasAudioPermission()) Thread { DeviceMusic.refresh(this) }.start()
+    }
+
+    override fun onDestroy() {
+        if (isFinishing) PlayerConnection.disconnect()
+        super.onDestroy()
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        when {
+            intent?.action == Intent.ACTION_SEND -> {
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: intent.getStringExtra(Intent.EXTRA_SUBJECT)
+                val url = text?.let { Regex("https?://\\S+").find(it)?.value?.trimEnd('.', ',', ')', '"', '\'') }
+                if (url != null) { ui.sharedUrl = url; ui.tab = Tab.DOWNLOAD; ui.openPlaylist = null; ui.videoFullscreen = false }
+                else ui.toast("No he encontrado ningún enlace en lo compartido")
+            }
+            intent?.getStringExtra(EXTRA_TAB) == "descargar" -> { ui.tab = Tab.DOWNLOAD; ui.openPlaylist = null }
+            intent?.getStringExtra(EXTRA_TAB) == "reproductor" -> { ui.tab = Tab.PLAYER; ui.openPlaylist = null }
+        }
+    }
+
+    private fun hasAudioPermission(): Boolean {
+        val p = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
+        return checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun askPermissions() {
+        val wanted = buildList {
+            if (Build.VERSION.SDK_INT >= 33) {
+                add(Manifest.permission.POST_NOTIFICATIONS); add(Manifest.permission.READ_MEDIA_AUDIO)
+            } else add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+        if (wanted.isNotEmpty()) requestPermissions(wanted.toTypedArray(), 7)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (hasAudioPermission()) Thread { DeviceMusic.refresh(this) }.start()
+    }
+
+    companion object {
+        const val EXTRA_TAB = "pestana"
+    }
+}

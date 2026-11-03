@@ -37,15 +37,15 @@ jobs:
       - name: Compilar
         run: gradle :app:assembleRelease --stacktrace
       - name: Preparar APK
-        run: cp app/build/outputs/apk/release/app-release.apk LinkAMp3.apk
+        run: cp app/build/outputs/apk/release/app-release.apk Aura.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: LinkAMp3
-          path: LinkAMp3.apk
+          name: Aura
+          path: Aura.apk
       - name: Publicar versión
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: Link a MP3 1.0.${{ github.run_number }}
-          files: LinkAMp3.apk
+          tag_name: v2.0.${{ github.run_number }}
+          name: Aura 2.0.${{ github.run_number }}
+          files: Aura.apk
           make_latest: true
