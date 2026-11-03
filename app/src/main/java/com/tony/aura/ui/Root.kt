@@ -103,7 +103,27 @@ fun AuraRoot() {
         Box(Modifier.fillMaxWidth().height(420.dp).background(Aura.MeshGlow))
 
         Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f).fillMaxWidth()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) { ContentArea() }
+            BottomNav()
+        }
+
+        AnimatedVisibility(
+            visible = ui.videoFullscreen && player.current?.isVideo == true,
+            enter = fadeIn(), exit = fadeOut(),
+        ) { VideoScreen(onClose = { ui.videoFullscreen = false }) }
+    }
+
+    ui.optionsFor?.let { t -> TrackOptionsSheet(t, ui.openPlaylist, onDismiss = { ui.optionsFor = null }) }
+    ui.addToPlaylistFor?.let { t -> AddToPlaylistSheet(t, onDismiss = { ui.addToPlaylistFor = null }) }
+    ui.editTrack?.let { t -> EditTrackDialog(t, onDismiss = { ui.editTrack = null }) }
+}
+
+
+@Composable
+private fun ContentArea() {
+    val ui = LocalUi.current
+    val player by PlayerConnection.ui.collectAsState()
+    Box(Modifier.fillMaxSize()) {
                 Crossfade(targetState = ui.tab, label = "pestañas") { tab ->
                     Box(Modifier.fillMaxSize().statusBarsPadding()) {
                         when (tab) {
@@ -134,18 +154,6 @@ fun AuraRoot() {
                     exit = slideOutVertically { it } + fadeOut(),
                 ) { MiniPlayer() }
             }
-            BottomNav()
-        }
-
-        AnimatedVisibility(
-            visible = ui.videoFullscreen && player.current?.isVideo == true,
-            enter = fadeIn(), exit = fadeOut(),
-        ) { VideoScreen(onClose = { ui.videoFullscreen = false }) }
-    }
-
-    ui.optionsFor?.let { t -> TrackOptionsSheet(t, ui.openPlaylist, onDismiss = { ui.optionsFor = null }) }
-    ui.addToPlaylistFor?.let { t -> AddToPlaylistSheet(t, onDismiss = { ui.addToPlaylistFor = null }) }
-    ui.editTrack?.let { t -> EditTrackDialog(t, onDismiss = { ui.editTrack = null }) }
 }
 
 @Composable

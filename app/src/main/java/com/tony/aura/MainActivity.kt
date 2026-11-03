@@ -8,6 +8,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.remember
 import com.tony.aura.data.DeviceMusic
@@ -22,6 +23,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 class MainActivity : ComponentActivity() {
 
     private val ui = UiState()
+    private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        if (hasAudioPermission()) Thread { DeviceMusic.refresh(this) }.start()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -82,13 +86,7 @@ class MainActivity : ComponentActivity() {
                 add(Manifest.permission.POST_NOTIFICATIONS); add(Manifest.permission.READ_MEDIA_AUDIO)
             } else add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
-        if (wanted.isNotEmpty()) requestPermissions(wanted.toTypedArray(), 7)
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (hasAudioPermission()) Thread { DeviceMusic.refresh(this) }.start()
+        if (wanted.isNotEmpty()) permissionLauncher.launch(wanted.toTypedArray())
     }
 
     companion object {
