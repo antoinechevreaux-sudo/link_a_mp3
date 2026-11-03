@@ -30,6 +30,7 @@ class UiState {
     var addToPlaylistFor by mutableStateOf<Track?>(null)
     var editTrack by mutableStateOf<Track?>(null)
     var sharedUrl by mutableStateOf<String?>(null)
+    var pickAmbient by mutableStateOf(false)
     var message by mutableStateOf<String?>(null)
 
     fun play(tracks: List<Track>, index: Int = 0, shuffle: Boolean = false) {

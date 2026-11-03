@@ -19,6 +19,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import com.tony.aura.player.Ambient
+import com.tony.aura.ui.components.AuraCard
+import com.tony.aura.ui.components.Kicker
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -195,6 +204,8 @@ fun NowPlayingScreen() {
                 items(PlayerConnection.SPEEDS) { s -> AuraChip(speedLabel(s), s == p.speed, { PlayerConnection.setSpeed(s) }) }
             }
         }
+        item { Spacer(Modifier.height(22.dp)) }
+        item { MixCard() }
         val upNext = if (p.queue.size > 1) p.queue.drop(p.index + 1).take(20) else emptyList()
         if (upNext.isNotEmpty()) {
             item { Column { Spacer(Modifier.height(24.dp)); SectionTitle("A continuación") } }
@@ -335,5 +346,64 @@ private fun Wave(playing: Boolean) {
                     .clip(CircleShape).background(if (i % 3 == 1) Aura.Brand400 else Aura.Brand500),
             )
         }
+    }
+}
+
+/** Mezcla: una segunda pista sonando de fondo, con volúmenes independientes. */
+@Composable
+private fun MixCard() {
+    val ui = LocalUi.current
+    val a by Ambient.state.collectAsState()
+    AuraCard {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Layers, null, tint = Aura.Brand500, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Kicker("Mezcla · capa de fondo")
+            }
+            val t = a.track
+            if (t == null) {
+                Text("Pon lluvia, mar o ruido blanco debajo de lo que escuchas.", Modifier.padding(top = 8.dp, bottom = 12.dp),
+                    color = Aura.Slate300, fontFamily = Jakarta, fontSize = 13.sp)
+                GhostButton("Añadir sonido de fondo", { ui.pickAmbient = true }, Modifier.fillMaxWidth(), Icons.Rounded.Add)
+            } else {
+                Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Cover(t.coverUri, Modifier.size(44.dp), RoundedCornerShape(10.dp), seed = t.title)
+                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                        Text(t.title, color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if (a.playing) "Sonando en bucle" else "En pausa", color = if (a.playing) Aura.Brand400 else Aura.Slate400,
+                            fontFamily = Jakarta, fontSize = 12.sp)
+                    }
+                    PlainIcon(if (a.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, 24.dp, Color.White) { Ambient.toggle() }
+                    PlainIcon(Icons.Rounded.SwapHoriz, 22.dp) { ui.pickAmbient = true }
+                    PlainIcon(Icons.Rounded.Close, 22.dp) { Ambient.clear() }
+                }
+                VolumeRow("Principal", a.mainVolume) { Ambient.setMainVolume(it) }
+                VolumeRow("Fondo", a.volume) { Ambient.setVolume(it) }
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { Ambient.setLinked(!a.linked) }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Pausar junto con la principal", Modifier.weight(1f), color = Aura.Slate200, fontFamily = Jakarta, fontSize = 13.sp)
+                    Switch(
+                        checked = a.linked, onCheckedChange = { Ambient.setLinked(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White, checkedTrackColor = Aura.Brand500, checkedBorderColor = Aura.Brand500,
+                            uncheckedThumbColor = Aura.Slate400, uncheckedTrackColor = Aura.Slate900, uncheckedBorderColor = Aura.Border,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VolumeRow(label: String, value: Float, onChange: (Float) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.width(72.dp), color = Aura.Slate300, fontFamily = Jakarta, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+        ThinSeekBar(value, onChange, onChange, Aura.Brand500, Aura.Slate700, Modifier.weight(1f))
+        Text("${(value * 100).toInt()} %", Modifier.width(44.dp).padding(start = 8.dp), color = Aura.Slate400, fontFamily = Jakarta, fontSize = 11.sp)
     }
 }

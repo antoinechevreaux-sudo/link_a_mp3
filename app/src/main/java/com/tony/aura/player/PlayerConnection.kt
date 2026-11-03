@@ -46,6 +46,7 @@ object PlayerConnection {
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) = refresh()
+        override fun onIsPlayingChanged(isPlaying: Boolean) = Ambient.onMainPlaying(isPlaying)
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             mediaItem?.mediaId?.let { Library.markPlayed(it) }
         }
@@ -64,6 +65,7 @@ object PlayerConnection {
             val c = try { future.get() } catch (_: Throwable) { null } ?: return@addListener
             controller = c
             c.addListener(listener)
+            c.volume = Ambient.state.value.mainVolume
             pending.forEach { it(c) }
             pending.clear()
             refresh()
@@ -73,6 +75,7 @@ object PlayerConnection {
     /** Para la reproducción y vacía la cola (al cerrar la app). */
     fun stopAll() {
         controller?.let { it.stop(); it.clearMediaItems() }
+        Ambient.clear()
         queue = emptyList()
         _ui.value = PlayerUi()
     }

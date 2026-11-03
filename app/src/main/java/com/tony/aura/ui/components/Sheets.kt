@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PlaylistPlay
@@ -64,7 +65,9 @@ import com.tony.aura.data.Kind
 import com.tony.aura.data.Library
 import com.tony.aura.data.Track
 import com.tony.aura.download.DownloadService
+import com.tony.aura.player.Ambient
 import com.tony.aura.player.PlayerConnection
+import com.tony.aura.data.DeviceMusic
 import com.tony.aura.ui.LocalUi
 import com.tony.aura.ui.theme.Aura
 import com.tony.aura.ui.theme.Jakarta
@@ -126,6 +129,9 @@ fun TrackOptionsSheet(track: Track, playlistId: String?, onDismiss: () -> Unit) 
                 if (current.liked) "Quitar de Me gusta" else "Me gusta",
                 tint = if (current.liked) Aura.Brand400 else Aura.Slate200,
             ) { Library.toggleLike(current); onDismiss() }
+            if (!current.isVideo) SheetItem(Icons.Rounded.Layers, "Usar como sonido de fondo") {
+                Ambient.set(current); ui.toast("Sonando de fondo: ${current.title}"); onDismiss()
+            }
             SheetItem(Icons.AutoMirrored.Rounded.PlaylistAdd, "Añadir a una playlist") { ui.addToPlaylistFor = current; onDismiss() }
             if (playlist != null) SheetItem(Icons.Rounded.Delete, "Quitar de «${playlist.name}»") {
                 Library.removeFromPlaylist(playlist.id, current.id); onDismiss()
@@ -296,4 +302,45 @@ fun saveTrackToDevice(ctx: Context, track: Track, onResult: (String) -> Unit) {
         }
         main.post { onResult(msg) }
     }.start()
+}
+
+/** Elegir la pista que sonará de fondo (lluvia, ruido blanco, música suave…). */
+@Composable
+fun AmbientPickerSheet(onDismiss: () -> Unit) {
+    val lib by Library.state.collectAsState()
+    val device by DeviceMusic.tracks.collectAsState()
+    var query by remember { mutableStateOf("") }
+    val ids = lib.tracks.map { it.id }.toSet()
+    val all = (lib.tracks + device.filter { it.id !in ids }).filter { !it.isVideo }
+    val q = query.trim().lowercase()
+    val list = if (q.isEmpty()) all else all.filter { q in it.title.lowercase() || q in it.artist.lowercase() }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Aura.Elevated,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 12.dp)) {
+            Kicker("Capa de fondo")
+            Text("Elige un sonido", color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Black, fontSize = 22.sp)
+            Text("Sonará en bucle a la vez que lo que estés escuchando. Consejo: descarga un vídeo de «lluvia 10 horas» como MP3.",
+                color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+            OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("Buscar (lluvia, mar, ruido…)", fontFamily = Jakarta) },
+                colors = auraFieldColors(), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (list.isEmpty()) Text("No hay audios en tu biblioteca todavía.", color = Aura.Slate400, fontFamily = Jakarta,
+                    fontSize = 13.sp, modifier = Modifier.padding(vertical = 20.dp))
+                list.forEach { t ->
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { Ambient.set(t); onDismiss() }.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Cover(t.coverUri, Modifier.size(42.dp), RoundedCornerShape(10.dp), seed = t.title)
+                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                            Text(t.title, color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.artist, color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp, maxLines = 1)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
