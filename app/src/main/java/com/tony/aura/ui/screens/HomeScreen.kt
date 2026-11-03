@@ -67,9 +67,13 @@ import com.tony.aura.ui.components.TrackRow
 import com.tony.aura.ui.components.redGlow
 import com.tony.aura.ui.theme.Aura
 import com.tony.aura.ui.theme.Jakarta
-import java.util.Calendar
+import com.tony.aura.data.Kind
+import com.tony.aura.ui.components.AppLogo
 
-private enum class HomeFilter(val label: String) { ALL("Para ti"), AUDIO("Música"), VIDEO("Vídeos"), LIKED("Me gusta") }
+private enum class HomeFilter(val label: String, val kind: Kind?) {
+    ALL("Todas", null), MUSIC("Música", Kind.MUSIC), VIDEO("Vídeos", Kind.VIDEO),
+    PODCAST("Podcasts", Kind.PODCAST), AUDIOBOOK("Audiolibros", Kind.AUDIOBOOK)
+}
 
 @Composable
 fun HomeScreen() {
@@ -79,20 +83,7 @@ fun HomeScreen() {
     var filter by rememberSaveable { mutableStateOf(HomeFilter.ALL) }
 
     val recent = remember(lib, filter) {
-        val base = lib.recent
-        when (filter) {
-            HomeFilter.ALL -> base
-            HomeFilter.AUDIO -> base.filter { !it.isVideo }
-            HomeFilter.VIDEO -> base.filter { it.isVideo }
-            HomeFilter.LIKED -> lib.liked
-        }
-    }
-    val greeting = remember {
-        when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
-            in 6..13 -> "Buenos días"
-            in 14..20 -> "Buenas tardes"
-            else -> "Buenas noches"
-        }
+        filter.kind?.let { k -> lib.recent.filter { it.kind == k } } ?: lib.recent
     }
 
     LazyColumn(
@@ -100,18 +91,18 @@ fun HomeScreen() {
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 110.dp),
     ) {
         item {
-            ScreenHeader(greeting, "Aura") {
-                RoundButton(Icons.Rounded.Download, { ui.tab = Tab.DOWNLOAD }, contentDescription = "Descargar")
+            // Encabezado: icono de la app + categorías
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                AppLogo(Modifier.size(40.dp))
+                Spacer(Modifier.width(10.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 6.dp)) {
+                    items(HomeFilter.entries) { f -> AuraChip(f.label, f == filter, { filter = f }) }
+                }
             }
         }
-        item { HeroCard() }
-        item {
-            LazyRow(
-                Modifier.padding(vertical = 18.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(HomeFilter.entries) { f -> AuraChip(f.label, f == filter, { filter = f }) }
-            }
+        if (filter != HomeFilter.ALL) {
+            item { CategoryList(filter, recent) }
+            return@LazyColumn
         }
         item {
             // Accesos rápidos (2 columnas)
@@ -136,13 +127,13 @@ fun HomeScreen() {
             item {
                 EmptyState(
                     Icons.Rounded.Download,
-                    if (filter == HomeFilter.ALL) "Tu música empieza aquí" else "Nada por aquí todavía",
-                    "Pega un enlace de YouTube, SoundCloud, Instagram… y guárdalo en Aura o en tu teléfono.",
+                    "Tu música empieza aquí",
+                    "Pega un enlace de YouTube, SoundCloud, Instagram… y guárdalo en Ember o en tu teléfono.",
                     "Ir al descargador",
                 ) { ui.tab = Tab.DOWNLOAD }
             }
         } else {
-            item { SectionTitle("Añadido recientemente", "Ver todo") { ui.openPlaylist = if (filter == HomeFilter.LIKED) Special.LIKED else Special.ALL } }
+            item { SectionTitle("Añadido recientemente", "Ver todo") { ui.openPlaylist = Special.ALL } }
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     itemsIndexed(recent.take(12)) { i, t -> CoverCard(t) { ui.play(recent, i) } }
@@ -180,50 +171,6 @@ private fun QuickTile(t: Tile, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-private fun HeroCard() {
-    val ui = LocalUi.current
-    val lib by Library.state.collectAsState()
-    val mix = lib.tracks.filter { !it.isVideo }
-    val shape = RoundedCornerShape(22.dp)
-    Box(
-        Modifier.fillMaxWidth().height(180.dp).redGlow(shape, 22.dp, 0.45f).clip(shape)
-            .background(Aura.HeroGradient).border(1.dp, Aura.Brand500.copy(alpha = 0.25f), shape)
-            .clickable {
-                if (mix.isNotEmpty()) ui.play(mix.shuffled(), 0) else ui.tab = Tab.DOWNLOAD
-            }
-            .padding(16.dp),
-    ) {
-        Icon(
-            Icons.Rounded.GraphicEq, null, tint = Color.White,
-            modifier = Modifier.align(Alignment.BottomEnd).size(120.dp).alpha(0.18f),
-        )
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                if (mix.isNotEmpty()) "MIX DESTACADO" else "EMPIEZA AQUÍ",
-                Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)).padding(horizontal = 10.dp, vertical = 4.dp),
-                color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.2.sp,
-            )
-            Spacer(Modifier.weight(1f))
-            Box(Modifier.size(30.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(16.dp))
-            }
-        }
-        Column(Modifier.align(Alignment.BottomStart)) {
-            Kicker(if (mix.isNotEmpty()) "Aleatorio · ${mix.size} canciones" else "Descargador integrado", color = Aura.Rose200)
-            Text(
-                if (mix.isNotEmpty()) "TU MEZCLA" else "TRAE TU MÚSICA",
-                color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Black, fontSize = 26.sp, letterSpacing = (-0.5).sp,
-            )
-            Text(
-                if (mix.isNotEmpty()) mix.map { it.artist }.filter { it.isNotBlank() }.distinct().take(3).joinToString(", ")
-                else "Pega un enlace y conviértelo en MP3 o vídeo",
-                color = Aura.Slate200, fontFamily = Jakarta, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
 fun CoverCard(t: Track, width: Int = 132, onClick: () -> Unit) {
     Column(Modifier.width(width.dp).clickable(onClick = onClick)) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(18.dp)).border(1.dp, Aura.Border, RoundedCornerShape(18.dp))) {
@@ -238,5 +185,33 @@ fun CoverCard(t: Track, width: Int = 132, onClick: () -> Unit) {
         Text(t.title, color = Aura.Slate200, fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 13.sp,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(t.artist, color = Aura.Slate400, fontFamily = Jakarta, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun CategoryList(filter: HomeFilter, tracks: List<Track>) {
+    val ui = LocalUi.current
+    val player by PlayerConnection.ui.collectAsState()
+    Column {
+        if (tracks.isEmpty()) {
+            EmptyState(
+                Icons.Rounded.Download, "Aún no hay ${filter.label.lowercase()}",
+                "Al descargar, elige el tipo «${filter.kind?.label ?: ""}» y aparecerá aquí. También puedes cambiar el tipo desde el menú ⋮ de cada elemento.",
+                "Ir al descargador",
+            ) { ui.tab = Tab.DOWNLOAD }
+        } else {
+            Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Kicker("Categoría")
+                    Text(filter.label, color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                    Text("${tracks.size} elementos", color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp)
+                }
+                RoundButton(Icons.Rounded.PlayArrow, { ui.play(tracks, 0) }, size = 50.dp, iconSize = 26.dp, primary = true,
+                    contentDescription = "Reproducir todo")
+            }
+            tracks.forEachIndexed { i, t ->
+                TrackRow(t, onClick = { ui.play(tracks, i) }, onMore = { ui.optionsFor = t }, playing = player.current?.id == t.id)
+            }
+        }
     }
 }

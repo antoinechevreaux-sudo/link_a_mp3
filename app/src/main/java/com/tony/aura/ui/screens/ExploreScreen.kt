@@ -25,6 +25,8 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
@@ -49,6 +51,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tony.aura.data.DeviceMusic
+import com.tony.aura.data.Kind
 import com.tony.aura.data.Library
 import com.tony.aura.player.PlayerConnection
 import com.tony.aura.ui.LocalUi
@@ -117,10 +120,16 @@ fun ExploreScreen() {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Category("Música", "${lib.tracks.count { !it.isVideo && !it.fromDevice }}", Icons.Rounded.Headphones,
-                            Brush.linearGradient(listOf(Aura.Brand600, Aura.Slate900)), Modifier.weight(1f)) { ui.openPlaylist = Special.ALL }
+                        Category("Música", "${lib.recent.count { it.kind == Kind.MUSIC }}", Icons.Rounded.Headphones,
+                            Brush.linearGradient(listOf(Aura.Brand600, Aura.Slate900)), Modifier.weight(1f)) { ui.openPlaylist = Special.MUSIC }
                         Category("Vídeos", "${lib.tracks.count { it.isVideo }}", Icons.Rounded.Movie,
                             Brush.linearGradient(listOf(Aura.Rose700, Aura.Slate900)), Modifier.weight(1f)) { ui.openPlaylist = Special.VIDEOS }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Category("Podcasts", "${lib.recent.count { it.kind == Kind.PODCAST }}", Icons.Rounded.Mic,
+                            Brush.linearGradient(listOf(Aura.Rose600, Aura.Slate950)), Modifier.weight(1f)) { ui.openPlaylist = Special.PODCASTS }
+                        Category("Audiolibros", "${lib.recent.count { it.kind == Kind.AUDIOBOOK }}", Icons.AutoMirrored.Rounded.MenuBook,
+                            Brush.linearGradient(listOf(Aura.Brand700, Aura.Slate900)), Modifier.weight(1f)) { ui.openPlaylist = Special.AUDIOBOOKS }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Category("Me gusta", "${lib.liked.size}", Icons.Rounded.Favorite,

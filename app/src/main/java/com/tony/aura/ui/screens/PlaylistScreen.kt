@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tony.aura.data.DeviceMusic
+import com.tony.aura.data.Kind
 import com.tony.aura.data.Library
 import com.tony.aura.data.Track
 import com.tony.aura.player.PlayerConnection
@@ -81,6 +82,9 @@ fun PlaylistScreen(id: String) {
         Special.ALL -> Triple("Colección", "Todo lo descargado", lib.recent)
         Special.VIDEOS -> Triple("Colección", "Vídeos", lib.tracks.filter { it.isVideo })
         Special.DEVICE -> Triple("En el teléfono", "Tu música", device)
+        Special.MUSIC -> Triple("Categoría", "Música", lib.recent.filter { it.kind == Kind.MUSIC })
+        Special.PODCASTS -> Triple("Categoría", "Podcasts", lib.recent.filter { it.kind == Kind.PODCAST })
+        Special.AUDIOBOOKS -> Triple("Categoría", "Audiolibros", lib.recent.filter { it.kind == Kind.AUDIOBOOK })
         else -> Triple("Playlist", playlist?.name ?: "Playlist", playlist?.let { lib.tracksOf(it) } ?: emptyList())
     }
     val total = tracks.sumOf { it.durationMs }
@@ -140,7 +144,7 @@ fun PlaylistScreen(id: String) {
         if (tracks.isEmpty()) item {
             if (id == Special.DEVICE && !DeviceMusic.loaded)
                 EmptyState(Icons.Rounded.MusicNote, "Sin acceso a tu música",
-                    "Permite a Aura leer el audio del teléfono en Ajustes → Apps → Aura → Permisos.")
+                    "Permite a Ember leer el audio del teléfono en Ajustes → Apps → Ember → Permisos.")
             else EmptyState(Icons.Rounded.MusicNote, "Aquí no hay nada aún",
                 "Descarga algo y elige esta playlist como destino, o añade canciones desde su menú ⋮.",
                 "Ir al descargador") { ui.openPlaylist = null; ui.tab = Tab.DOWNLOAD }

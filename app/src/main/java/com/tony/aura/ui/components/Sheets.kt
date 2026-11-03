@@ -60,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import com.tony.aura.data.Kind
 import com.tony.aura.data.Library
 import com.tony.aura.data.Track
 import com.tony.aura.download.DownloadService
@@ -130,7 +131,7 @@ fun TrackOptionsSheet(track: Track, playlistId: String?, onDismiss: () -> Unit) 
                 Library.removeFromPlaylist(playlist.id, current.id); onDismiss()
             }
             if (!current.fromDevice) {
-                SheetItem(Icons.Rounded.Edit, "Editar título y artista") { ui.editTrack = current; onDismiss() }
+                SheetItem(Icons.Rounded.Edit, "Editar título, artista y tipo") { ui.editTrack = current; onDismiss() }
                 SheetItem(Icons.Rounded.PhoneAndroid, if (current.deviceUri != null) "Ya está en el dispositivo" else "Guardar en el dispositivo") {
                     if (current.deviceUri == null) saveTrackToDevice(ctx, current) { ui.toast(it) }
                     onDismiss()
@@ -138,7 +139,7 @@ fun TrackOptionsSheet(track: Track, playlistId: String?, onDismiss: () -> Unit) 
             }
             SheetItem(Icons.Rounded.Share, "Compartir archivo") { shareTrack(ctx, current); onDismiss() }
             if (!current.fromDevice || lib.track(current.id) != null) {
-                SheetItem(Icons.Rounded.Delete, if (current.fromDevice) "Quitar de Aura" else "Eliminar de Aura", tint = Aura.Brand400) { confirmDelete = true }
+                SheetItem(Icons.Rounded.Delete, if (current.fromDevice) "Quitar de Ember" else "Eliminar de Ember", tint = Aura.Brand400) { confirmDelete = true }
             }
         }
     }
@@ -148,8 +149,8 @@ fun TrackOptionsSheet(track: Track, playlistId: String?, onDismiss: () -> Unit) 
         title = { Text("¿Eliminar «${current.title}»?", fontFamily = Jakarta, fontWeight = FontWeight.ExtraBold, color = Color.White) },
         text = {
             Text(
-                if (current.deviceUri != null) "Se borra de Aura y de tus playlists. La copia en el dispositivo se conserva."
-                else "Se borra de Aura y de tus playlists.",
+                if (current.deviceUri != null) "Se borra de Ember y de tus playlists. La copia en el dispositivo se conserva."
+                else "Se borra de Ember y de tus playlists.",
                 fontFamily = Jakarta, color = Aura.Slate300,
             )
         },
@@ -237,6 +238,7 @@ fun TextInputDialog(
 fun EditTrackDialog(track: Track, onDismiss: () -> Unit) {
     var title by remember { mutableStateOf(track.title) }
     var artist by remember { mutableStateOf(track.artist) }
+    var kind by remember { mutableStateOf(track.kind) }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Aura.Elevated,
@@ -247,11 +249,14 @@ fun EditTrackDialog(track: Track, onDismiss: () -> Unit) {
                     colors = auraFieldColors(), shape = RoundedCornerShape(14.dp), singleLine = true)
                 OutlinedTextField(artist, { artist = it }, label = { Text("Artista", fontFamily = Jakarta) },
                     colors = auraFieldColors(), shape = RoundedCornerShape(14.dp), singleLine = true)
+                if (!track.isVideo) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(Kind.MUSIC, Kind.PODCAST, Kind.AUDIOBOOK).forEach { k -> AuraChip(k.label, kind == k, { kind = k }) }
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                Library.update(track.id) { it.copy(title = title.trim().ifBlank { it.title }, artist = artist.trim()) }
+                Library.update(track.id) { it.copy(title = title.trim().ifBlank { it.title }, artist = artist.trim(), category = kind.name) }
                 onDismiss()
             }) { Text("Guardar", color = Aura.Brand400, fontFamily = Jakarta, fontWeight = FontWeight.Bold) }
         },
@@ -285,7 +290,7 @@ fun saveTrackToDevice(ctx: Context, track: Track, onResult: (String) -> Unit) {
             val path = Uri.parse(track.uri).path ?: throw IllegalStateException("Archivo no encontrado")
             val uri = DownloadService.saveToDevice(ctx, File(path), track.title, track.isVideo)
             Library.update(track.id) { it.copy(deviceUri = uri.toString()) }
-            if (track.isVideo) "Guardado en Películas/Aura" else "Guardado en Música/Aura"
+            if (track.isVideo) "Guardado en Películas/Ember" else "Guardado en Música/Ember"
         } catch (e: Throwable) {
             "No se pudo guardar: ${e.message}"
         }

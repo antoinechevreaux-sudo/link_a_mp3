@@ -37,15 +37,15 @@ jobs:
       - name: Compilar
         run: gradle :app:assembleRelease --stacktrace
       - name: Preparar APK
-        run: cp app/build/outputs/apk/release/app-release.apk Aura.apk
+        run: cp app/build/outputs/apk/release/app-release.apk Ember.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Aura
-          path: Aura.apk
+          name: Ember
+          path: Ember.apk
       - name: Publicar versión
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.${{ github.run_number }}
-          name: Aura 2.0.${{ github.run_number }}
-          files: Aura.apk
+          tag_name: v3.0.${{ github.run_number }}
+          name: Ember 3.0.${{ github.run_number }}
+          files: Ember.apk
           make_latest: true

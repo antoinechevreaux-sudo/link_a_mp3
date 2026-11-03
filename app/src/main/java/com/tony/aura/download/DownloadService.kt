@@ -133,6 +133,7 @@ class DownloadService : Service() {
                     coverUri = storedCover?.let { Uri.fromFile(it).toString() } ?: spec.thumbnail,
                     durationMs = duration, isVideo = spec.format.isVideo, sourceUrl = spec.url,
                     deviceUri = deviceUri,
+                    category = (if (spec.format.isVideo) com.tony.aura.data.Kind.VIDEO else spec.kind).name,
                 )
                 Library.add(track)
                 spec.playlistId?.let { Library.addToPlaylist(it, track) }
@@ -142,7 +143,7 @@ class DownloadService : Service() {
 
             val where = buildList {
                 if (spec.addToLibrary) add(if (spec.playlistId != null) "playlist" else "biblioteca")
-                if (spec.saveToDevice) add(if (spec.format.isVideo) "Películas/Aura" else "Música/Aura")
+                if (spec.saveToDevice) add(if (spec.format.isVideo) "Películas/Ember" else "Música/Ember")
             }.joinToString(" y ")
             set(id, true) {
                 it.copy(state = DlState.DONE, progress = 100f, status = "Listo · guardado en $where",
@@ -240,7 +241,7 @@ class DownloadService : Service() {
     private fun progressNotification(job: DlJob?): Notification {
         val b = NotificationCompat.Builder(this, AuraApp.CH_DOWNLOADS)
             .setSmallIcon(R.drawable.ic_stat)
-            .setContentTitle(job?.spec?.title ?: "Aura")
+            .setContentTitle(job?.spec?.title ?: "Ember")
             .setContentText(job?.status ?: "Preparando…")
             .setOngoing(true).setOnlyAlertOnce(true).setSilent(true)
             .setColor(0xFFEF4444.toInt())
@@ -289,7 +290,7 @@ class DownloadService : Service() {
         fun saveToDevice(ctx: Context, f: File, title: String, isVideo: Boolean): Uri {
             val collection = if (isVideo) MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                              else MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-            val dir = (if (isVideo) Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_MUSIC) + "/Aura"
+            val dir = (if (isVideo) Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_MUSIC) + "/Ember"
             val safe = title.replace(Regex("[\\\\/:*?\"<>|]"), " ").replace(Regex("\\s+"), " ").trim().take(120).ifBlank { "Aura" }
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, "$safe.${f.extension}")

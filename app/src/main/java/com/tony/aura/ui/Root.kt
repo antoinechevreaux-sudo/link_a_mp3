@@ -209,7 +209,7 @@ private fun BottomNav() {
     ) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.06f)))
         Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().height(66.dp).padding(horizontal = 6.dp),
+            Modifier.fillMaxWidth().navigationBarsPadding().height(62.dp).padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             NavItem(Tab.HOME, Icons.Rounded.Home)
@@ -218,12 +218,12 @@ private fun BottomNav() {
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 val selected = ui.tab == Tab.DOWNLOAD && ui.openPlaylist == null
                 Box(
-                    Modifier.size(50.dp).offset(y = (-6).dp).redGlow(CircleShape, if (selected) 24.dp else 14.dp)
+                    Modifier.size(46.dp).offset(y = (-4).dp).redGlow(CircleShape, if (selected) 24.dp else 14.dp)
                         .clip(CircleShape).background(Aura.RedButton)
                         .clickable { ui.openPlaylist = null; ui.tab = Tab.DOWNLOAD },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Rounded.Download, "Descargar", tint = Color.White, modifier = Modifier.size(26.dp))
+                    Icon(Icons.Rounded.Download, "Descargar", tint = Color.White, modifier = Modifier.size(24.dp))
                 }
                 if (active > 0) Box(
                     Modifier.align(Alignment.TopEnd).offset(x = (-14).dp, y = 2.dp).size(18.dp).clip(CircleShape)
@@ -249,7 +249,7 @@ private fun androidx.compose.foundation.layout.RowScope.NavItem(tab: Tab, icon: 
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(icon, tab.label, tint = if (selected) Aura.Brand500 else Aura.Slate400, modifier = Modifier.size(24.dp))
+        Icon(icon, tab.label, tint = if (selected) Aura.Brand500 else Aura.Slate400, modifier = Modifier.size(22.dp))
         Spacer(Modifier.height(3.dp))
         Text(tab.label, color = if (selected) Aura.Brand500 else Aura.Slate400, fontFamily = Jakarta,
             fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 10.sp)

@@ -114,7 +114,7 @@ fun NowPlayingScreen() {
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("REPRODUCIENDO AHORA", color = Aura.Brand500, fontFamily = Jakarta, fontWeight = FontWeight.ExtraBold,
                         fontSize = 9.sp, letterSpacing = 2.sp)
-                    Text(if (p.queue.size > 1) "${p.index + 1} de ${p.queue.size}" else "Aura", color = Aura.Slate200,
+                    Text(if (p.queue.size > 1) "${p.index + 1} de ${p.queue.size}" else "Ember", color = Aura.Slate200,
                         fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
                 RoundButton(Icons.Rounded.MoreHoriz, { ui.optionsFor = t }, size = 36.dp, contentDescription = "Opciones")

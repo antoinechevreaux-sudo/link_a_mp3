@@ -19,6 +19,9 @@ import com.tony.aura.ui.Tab
 import com.tony.aura.ui.UiState
 import com.tony.aura.ui.theme.AuraTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 
 class MainActivity : ComponentActivity() {
 
@@ -38,7 +41,14 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
         setContent {
             AuraTheme {
-                CompositionLocalProvider(LocalUi provides remember { ui }) {
+                val conf = LocalConfiguration.current
+                val base = LocalDensity.current
+                // Diseño pensado para ~420 dp de ancho; en pantallas más estrechas se reduce todo en proporción
+                val factor = (conf.screenWidthDp / 420f).coerceIn(0.78f, 1f)
+                CompositionLocalProvider(
+                    LocalUi provides remember { ui },
+                    LocalDensity provides Density(base.density * factor, base.fontScale.coerceAtMost(1.1f)),
+                ) {
                     AuraRoot()
                 }
             }

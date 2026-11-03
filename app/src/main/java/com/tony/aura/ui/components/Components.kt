@@ -283,3 +283,26 @@ fun EmptyState(icon: ImageVector, title: String, text: String, action: String? =
 fun AuraDivider() { Box(Modifier.fillMaxWidth().height(1.dp).background(Aura.Border)) }
 
 val BorderSubtle = BorderStroke(1.dp, Aura.Border)
+
+/** Icono de la app (el mismo del lanzador): degradado carmesí con ondas de sonido. */
+@Composable
+fun AppLogo(modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(12.dp)
+    androidx.compose.foundation.Canvas(
+        modifier.redGlow(shape, 12.dp, 0.5f).clip(shape).background(Aura.RedButton)
+    ) {
+        val w = size.width
+        val h = size.height
+        val stroke = w * 0.085f
+        val bars = listOf(0.18f to 0.10f, 0.34f to 0.32f, 0.50f to 0.52f, 0.66f to 0.32f, 0.82f to 0.16f)
+        bars.forEach { (x, len) ->
+            drawLine(
+                Color.White,
+                androidx.compose.ui.geometry.Offset(w * x, h * (0.5f - len / 2)),
+                androidx.compose.ui.geometry.Offset(w * x, h * (0.5f + len / 2)),
+                strokeWidth = stroke,
+                cap = androidx.compose.ui.graphics.StrokeCap.Round,
+            )
+        }
+    }
+}

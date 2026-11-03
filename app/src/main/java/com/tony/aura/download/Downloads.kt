@@ -1,5 +1,6 @@
 package com.tony.aura.download
 
+import com.tony.aura.data.Kind
 import com.yausername.youtubedl_android.YoutubeDL
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,7 @@ data class DownloadSpec(
     val playlistId: String? = null,
     val saveToDevice: Boolean = false,
     val thumbnail: String? = null,
+    val kind: Kind = Kind.MUSIC,
 )
 
 enum class DlState { QUEUED, RUNNING, DONE, ERROR, CANCELED }

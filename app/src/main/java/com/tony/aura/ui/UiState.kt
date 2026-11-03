@@ -16,6 +16,9 @@ object Special {
     const val VIDEOS = "@videos"
     const val DEVICE = "@dispositivo"
     const val RECENT = "@recientes"
+    const val MUSIC = "@musica"
+    const val PODCASTS = "@podcasts"
+    const val AUDIOBOOKS = "@audiolibros"
 }
 
 class UiState {

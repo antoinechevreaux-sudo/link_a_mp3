@@ -12,6 +12,29 @@ import java.io.File
 import java.util.UUID
 import java.util.concurrent.Executors
 
+enum class Kind(val label: String, val plural: String) {
+    MUSIC("Música", "Música"),
+    VIDEO("Vídeo", "Vídeos"),
+    PODCAST("Podcast", "Podcasts"),
+    AUDIOBOOK("Audiolibro", "Audiolibros");
+
+    companion object {
+        fun parse(s: String?): Kind? = entries.firstOrNull { it.name == s }
+
+        /** Adivina el tipo por el título y la duración (se puede cambiar después). */
+        fun guess(title: String, durationSec: Int, isVideo: Boolean): Kind {
+            if (isVideo) return VIDEO
+            val t = title.lowercase()
+            return when {
+                listOf("audiolibro", "audiobook", "livre audio", "audioboek", "audiolivro", "capítulo", "chapter").any { it in t } -> AUDIOBOOK
+                listOf("podcast", "episodio", "episode", "ep.", "entrevista", "interview").any { it in t } -> PODCAST
+                durationSec > 25 * 60 -> PODCAST
+                else -> MUSIC
+            }
+        }
+    }
+}
+
 data class Track(
     val id: String,
     val title: String,
@@ -29,7 +52,10 @@ data class Track(
     val fromDevice: Boolean = false,
     val plays: Int = 0,
     val lastPlayed: Long = 0L,
-)
+    val category: String? = null,
+) {
+    val kind: Kind get() = if (isVideo) Kind.VIDEO else (Kind.parse(category)?.takeIf { it != Kind.VIDEO } ?: Kind.MUSIC)
+}
 
 data class Playlist(
     val id: String,
@@ -154,7 +180,7 @@ object Library {
                     put("cover", t.coverUri ?: ""); put("duration", t.durationMs); put("video", t.isVideo)
                     put("source", t.sourceUrl ?: ""); put("added", t.addedAt); put("liked", t.liked)
                     put("device", t.deviceUri ?: ""); put("fromDevice", t.fromDevice)
-                    put("plays", t.plays); put("lastPlayed", t.lastPlayed)
+                    put("plays", t.plays); put("lastPlayed", t.lastPlayed); put("cat", t.category ?: "")
                 })
             }
         })
@@ -185,6 +211,7 @@ object Library {
                         liked = o.optBoolean("liked"), deviceUri = o.optString("device").ifBlank { null },
                         fromDevice = o.optBoolean("fromDevice"), plays = o.optInt("plays"),
                         lastPlayed = o.optLong("lastPlayed"),
+                        category = o.optString("cat").ifBlank { null },
                     )
                 }
             } ?: emptyList()

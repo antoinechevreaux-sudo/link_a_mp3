@@ -69,6 +69,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tony.aura.data.Kind
 import com.tony.aura.data.Library
 import com.tony.aura.download.DlJob
 import com.tony.aura.download.DlState
@@ -107,6 +108,7 @@ object DownloadEditor {
     var title by mutableStateOf("")
     var artist by mutableStateOf("")
     var format by mutableStateOf(Format.MP3_HIGH)
+    var kind by mutableStateOf(Kind.MUSIC)
     var trim by mutableStateOf(false)
     var start by mutableStateOf(0f)
     var end by mutableStateOf(0f)
@@ -131,6 +133,7 @@ object DownloadEditor {
                 start = 0f
                 end = i.durationSec.toFloat().coerceAtLeast(0f)
                 if (!i.hasVideo && format.isVideo) format = Format.MP3_HIGH
+                kind = Kind.guess(i.title, i.durationSec, false)
             } catch (e: Throwable) {
                 error = Engine.friendlyError(e)
             } finally {
@@ -150,6 +153,7 @@ object DownloadEditor {
             url = i.url, title = title.trim().ifBlank { i.title }, artist = artist.trim(), format = format,
             startSec = s, endSec = e, addToLibrary = addToLibrary,
             playlistId = if (addToLibrary) playlistId else null, saveToDevice = saveToDevice, thumbnail = i.thumbnail,
+            kind = if (format.isVideo) Kind.VIDEO else kind,
         )
     }
 
@@ -296,6 +300,13 @@ private fun Editor(info: Engine.Info) {
                     }
                 }
 
+                if (!ed.format.isVideo) {
+                    Label("Tipo")
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(listOf(Kind.MUSIC, Kind.PODCAST, Kind.AUDIOBOOK)) { k -> AuraChip(k.label, ed.kind == k, { ed.kind = k }) }
+                    }
+                }
+
                 // Recorte
                 if (dur > 0) {
                     ToggleRow(Icons.Rounded.ContentCut, "Recortar el clip", "Descarga solo el fragmento que elijas", ed.trim) {
@@ -329,7 +340,7 @@ private fun Editor(info: Engine.Info) {
 
                 // Destino
                 Label("Destino")
-                ToggleRow(Icons.Rounded.LibraryMusic, "Añadir a Aura", "Para escucharlo aquí y en tus playlists", ed.addToLibrary) { ed.addToLibrary = it }
+                ToggleRow(Icons.Rounded.LibraryMusic, "Añadir a Ember", "Para escucharlo aquí y en tus playlists", ed.addToLibrary) { ed.addToLibrary = it }
                 if (ed.addToLibrary) {
                     LazyRow(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item { AuraChip("Sin playlist", ed.playlistId == null, { ed.playlistId = null }) }
@@ -339,7 +350,7 @@ private fun Editor(info: Engine.Info) {
                 }
                 ToggleRow(
                     Icons.Rounded.PhoneAndroid, "Guardar en el dispositivo",
-                    if (ed.format.isVideo) "En Películas/Aura, visible en la galería" else "En Música/Aura, visible en otras apps",
+                    if (ed.format.isVideo) "En Películas/Ember, visible en la galería" else "En Música/Ember, visible en otras apps",
                     ed.saveToDevice,
                 ) { ed.saveToDevice = it }
 
