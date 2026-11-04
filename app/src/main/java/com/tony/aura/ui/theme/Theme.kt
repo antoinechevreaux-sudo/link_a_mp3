@@ -15,51 +15,53 @@ import com.tony.aura.R
 
 /** Paleta de la maqueta Aura: carmesí sobre azul noche. */
 object Aura {
-    val Brand50 = Color(0xFFFFF1F2)
-    val Brand100 = Color(0xFFFFE4E6)
-    val Brand400 = Color(0xFFF87171)
-    val Brand500 = Color(0xFFEF4444)
-    val Brand600 = Color(0xFFDC2626)
-    val Brand700 = Color(0xFFB91C1C)
-    val Brand900 = Color(0xFF7F1D1D)
-    val Brand950 = Color(0xFF450A0A)
-    val Rose400 = Color(0xFFFB7185)
-    val Rose600 = Color(0xFFE11D48)
-    val Rose700 = Color(0xFFBE123C)
-    val Rose200 = Color(0xFFFECDD3)
+    // Paleta «Luna azul»: azul noche, lavanda y crema. Los nombres antiguos se conservan
+    // para no tocar cada pantalla; ahora apuntan a los tonos nuevos.
+    val Brand50 = Color(0xFFF3F2FE)
+    val Brand100 = Color(0xFFE6E5FC)
+    val Brand400 = Color(0xFFCFCCFA)   // texto resaltado
+    val Brand500 = Color(0xFFB9B6F7)   // acento lavanda
+    val Brand600 = Color(0xFF9C98EE)
+    val Brand700 = Color(0xFF5E5BB8)
+    val Brand900 = Color(0xFF2E2C66)
+    val Brand950 = Color(0xFF1C1A45)
+    val Rose400 = Color(0xFF8FA6F0)
+    val Rose600 = Color(0xFF6F7BE0)
+    val Rose700 = Color(0xFF3A3F94)
+    val Rose200 = Color(0xFFF2E8D4)    // crema
+    val OnAccent = Color(0xFF1C1A45)
 
-    val Base = Color(0xFF0B0F19)
-    val Surface = Color(0xFF111827)
-    val Border = Color(0xFF1F2937)
-    val Elevated = Color(0xFF1A2234)
-    val Slate950 = Color(0xFF020617)
-    val Slate900 = Color(0xFF0F172A)
-    val Slate800 = Color(0xFF1E293B)
-    val Slate700 = Color(0xFF334155)
-    val Slate400 = Color(0xFF94A3B8)
-    val Slate300 = Color(0xFFCBD5E1)
-    val Slate200 = Color(0xFFE2E8F0)
-    val White = Color.White
+    val Base = Color(0xFF0D1220)
+    val Surface = Color(0xFF151C2E)
+    val Border = Color(0xFF1F2740)
+    val Elevated = Color(0xFF1D2640)
+    val Slate950 = Color(0xFF0A0F1A)
+    val Slate900 = Color(0xFF111829)
+    val Slate800 = Color(0xFF222B45)
+    val Slate700 = Color(0xFF2A3350)
+    val Slate400 = Color(0xFF8D96AE)
+    val Slate300 = Color(0xFFB3BACC)
+    val Slate200 = Color(0xFFDCE0EC)
+    val White = Color(0xFFE9ECF5)
 
-    val HeroGradient = Brush.linearGradient(
-        0f to Brand500, 0.5f to Color(0xFF991B1B), 1f to Base,
-    )
+    val HeroGradient = Brush.linearGradient(listOf(Color(0xFF2E2C66), Color(0xFF151C2E)))
     val CardGradient = Brush.linearGradient(listOf(Slate800, Base))
-    val RedButton = Brush.linearGradient(listOf(Brand600, Brand500, Rose400))
-    val ProgressGradient = Brush.horizontalGradient(listOf(Rose600, Brand500))
+    val RedButton = Brush.linearGradient(listOf(Color(0xFFB9B6F7), Color(0xFFA9B4F4)))
+    val ProgressGradient = Brush.horizontalGradient(listOf(Color(0xFF8FA6F0), Brand500))
     val MeshGlow = Brush.radialGradient(
-        colors = listOf(Brand500.copy(alpha = 0.32f), Color.Transparent),
+        colors = listOf(Brand500.copy(alpha = 0.07f), Color.Transparent),
         radius = 900f,
     )
 }
 
 val Jakarta = FontFamily(
-    Font(R.font.jakarta_regular, FontWeight.Normal),
-    Font(R.font.jakarta_medium, FontWeight.Medium),
-    Font(R.font.jakarta_semibold, FontWeight.SemiBold),
-    Font(R.font.jakarta_bold, FontWeight.Bold),
-    Font(R.font.jakarta_extrabold, FontWeight.ExtraBold),
-    Font(R.font.jakarta_extrabold, FontWeight.Black),
+    Font(R.font.outfit_light, FontWeight.Light),
+    Font(R.font.outfit_light, FontWeight.Normal),
+    Font(R.font.outfit_regular, FontWeight.Medium),
+    Font(R.font.outfit_medium, FontWeight.SemiBold),
+    Font(R.font.outfit_medium, FontWeight.Bold),
+    Font(R.font.outfit_semibold, FontWeight.ExtraBold),
+    Font(R.font.outfit_semibold, FontWeight.Black),
 )
 
 private fun style(size: Int, weight: FontWeight, spacing: Float = 0f) =
@@ -85,7 +87,7 @@ fun AuraTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Aura.Brand500,
-            onPrimary = Aura.White,
+            onPrimary = Aura.OnAccent,
             secondary = Aura.Rose400,
             background = Aura.Base,
             onBackground = Aura.White,

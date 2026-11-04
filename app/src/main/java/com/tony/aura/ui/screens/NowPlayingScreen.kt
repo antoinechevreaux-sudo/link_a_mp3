@@ -19,6 +19,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.foundation.background
+import com.tony.aura.ui.components.Orb
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Layers
@@ -130,86 +132,78 @@ fun NowPlayingScreen() {
     }
     val liked = lib.track(t.id)?.liked == true
     var showSpeeds by remember { mutableStateOf(false) }
+    var showMix by remember { mutableStateOf(false) }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 40.dp)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                RoundButton(Icons.Rounded.KeyboardArrowDown, { ui.tab = Tab.HOME }, size = 36.dp, contentDescription = "Cerrar")
+                PlainIcon(Icons.Rounded.KeyboardArrowDown, 26.dp, Color.White) { ui.tab = Tab.HOME }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("REPRODUCIENDO AHORA", color = Aura.Brand500, fontFamily = Jakarta, fontWeight = FontWeight.ExtraBold,
-                        fontSize = 9.sp, letterSpacing = 2.sp)
+                    Text("REPRODUCIENDO", color = Aura.Slate400, fontFamily = Jakarta, fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp, letterSpacing = 1.sp)
                     Text(if (p.queue.size > 1) "${p.index + 1} de ${p.queue.size}" else "Ember", color = Aura.Slate200,
                         fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
-                RoundButton(Icons.Rounded.MoreHoriz, { ui.optionsFor = t }, size = 36.dp, contentDescription = "Opciones")
+                PlainIcon(Icons.Rounded.MoreHoriz, 26.dp, Color.White) { ui.optionsFor = t }
             }
         }
+        item { OrbPlayer(p, t.isVideo) { ui.videoFullscreen = true } }
         item {
-            val shape = RoundedCornerShape(28.dp)
-            Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                Box(
-                    Modifier.fillMaxWidth(0.82f).aspectRatio(1f).redGlow(shape, 40.dp, 0.6f)
-                        .border(2.dp, Aura.Brand500.copy(alpha = 0.3f), shape)
-                        .clickable(enabled = t.isVideo) { ui.videoFullscreen = true },
-                ) {
-                    Cover(t.coverUri, Modifier.fillMaxSize(), shape, t.isVideo, t.title)
-                    Box(Modifier.fillMaxSize().clip(shape).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)))))
-                    if (t.isVideo) Box(
-                        Modifier.align(Alignment.Center).size(64.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Rounded.Fullscreen, "Pantalla completa", tint = Color.White, modifier = Modifier.size(36.dp)) }
+            Column(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(t.title, color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Normal, fontSize = 20.sp,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(t.artist, color = Aura.Slate400, fontFamily = Jakarta, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Icon(if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, "Me gusta",
+                        tint = if (liked) Aura.Brand500 else Aura.Slate400,
+                        modifier = Modifier.padding(start = 6.dp).clip(CircleShape).clickable { Library.toggleLike(t) }.padding(6.dp).size(18.dp))
                 }
             }
         }
+        item { InlineSeek(p) }
         item {
-            Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                    Text(t.title, color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Black, fontSize = 22.sp,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis, letterSpacing = (-0.3).sp)
-                    Text(t.artist, color = Aura.Slate400, fontFamily = Jakarta, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // −15 · anterior · siguiente · +15 (la pausa está en el orbe)
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly) {
+                SkipButton(false, 56.dp) { PlayerConnection.back15() }
+                PlainIcon(Icons.Rounded.SkipPrevious, 30.dp, Aura.Slate200) { PlayerConnection.previous() }
+                PlainIcon(Icons.Rounded.SkipNext, 30.dp, Aura.Slate200) { PlayerConnection.next() }
+                SkipButton(true, 56.dp) { PlayerConnection.forward15() }
+            }
+        }
+        item {
+            val amb by Ambient.state.collectAsState()
+            val timer = rememberTimerLabel()
+            Column(Modifier.padding(top = 8.dp)) {
+                SettingRow(Icons.Rounded.Speed, "Velocidad", speedLabel(p.speed)) { showSpeeds = !showSpeeds }
+                if (showSpeeds) LazyRow(Modifier.padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(PlayerConnection.SPEEDS) { s -> AuraChip(speedLabel(s), s == p.speed, { PlayerConnection.setSpeed(s) }) }
                 }
-                RoundButton(
-                    if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, { Library.toggleLike(t) },
-                    size = 44.dp, tint = if (liked) Aura.Brand500 else Aura.Slate400, contentDescription = "Me gusta",
-                )
+                SettingRow(Icons.Rounded.Bedtime, "Apagar en", when (timer) { null -> "No"; "Fin" -> "Al final"; else -> timer }) { ui.pickTimer = true }
+                SettingRow(Icons.Rounded.GraphicEq, "Ruido de fondo",
+                    if (amb.track != null) "${(amb.volume * 100).toInt()} %" else "Elegir",
+                    trailing = {
+                        Switch(
+                            checked = amb.track != null && amb.playing,
+                            onCheckedChange = { on -> if (amb.track == null) ui.pickAmbient = true else if (on != amb.playing) Ambient.toggle() },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Aura.OnAccent, checkedTrackColor = Aura.Brand500, checkedBorderColor = Aura.Brand500,
+                                uncheckedThumbColor = Aura.Slate400, uncheckedTrackColor = Aura.Slate900, uncheckedBorderColor = Aura.Border,
+                            ),
+                            modifier = Modifier.padding(start = 10.dp),
+                        )
+                    }) { if (amb.track == null) ui.pickAmbient = true else showMix = !showMix }
+                if (amb.track != null && showMix) MixDetails()
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    PlainIcon(Icons.Rounded.Shuffle, 22.dp, if (p.shuffle) Aura.Brand500 else Aura.Slate400) { PlayerConnection.toggleShuffle() }
+                    PlainIcon(
+                        if (p.repeatMode == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, 22.dp,
+                        if (p.repeatMode != Player.REPEAT_MODE_OFF) Aura.Brand500 else Aura.Slate400,
+                    ) { PlayerConnection.cycleRepeat() }
+                    if (t.isVideo) PlainIcon(Icons.Rounded.Fullscreen, 24.dp, Aura.Slate200) { ui.videoFullscreen = true }
+                }
             }
         }
-        item { Wave(p.isPlaying) }
-        item { SeekBar(p) }
-        item {
-            // Controles: -15 · anterior · play · siguiente · +15
-            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                SkipButton(false) { PlayerConnection.back15() }
-                PlainIcon(Icons.Rounded.SkipPrevious, 34.dp) { PlayerConnection.previous() }
-                RoundButton(if (p.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, { PlayerConnection.togglePlay() },
-                    size = 70.dp, iconSize = 36.dp, primary = true, contentDescription = "Reproducir")
-                PlainIcon(Icons.Rounded.SkipNext, 34.dp) { PlayerConnection.next() }
-                SkipButton(true) { PlayerConnection.forward15() }
-            }
-        }
-        item {
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                PlainIcon(Icons.Rounded.Shuffle, 22.dp, if (p.shuffle) Aura.Brand500 else Aura.Slate400) { PlayerConnection.toggleShuffle() }
-                AuraChip(speedLabel(p.speed), p.speed != 1f, { showSpeeds = !showSpeeds }, Icons.Rounded.Speed)
-                val timer = rememberTimerLabel()
-                AuraChip(timer ?: "Apagar", timer != null, { ui.pickTimer = true }, Icons.Rounded.Bedtime)
-                if (t.isVideo) GhostButton("Pantalla completa", { ui.videoFullscreen = true }, icon = Icons.Rounded.Fullscreen)
-                PlainIcon(
-                    if (p.repeatMode == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, 22.dp,
-                    if (p.repeatMode != Player.REPEAT_MODE_OFF) Aura.Brand500 else Aura.Slate400,
-                ) { PlayerConnection.cycleRepeat() }
-            }
-        }
-        if (showSpeeds) item {
-            LazyRow(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(PlayerConnection.SPEEDS) { s -> AuraChip(speedLabel(s), s == p.speed, { PlayerConnection.setSpeed(s) }) }
-            }
-        }
-        item { Spacer(Modifier.height(22.dp)) }
-        item { MixCard() }
         val upNext = if (p.queue.size > 1) p.queue.drop(p.index + 1).take(20) else emptyList()
         if (upNext.isNotEmpty()) {
             item { Column { Spacer(Modifier.height(24.dp)); SectionTitle("A continuación") } }
@@ -298,7 +292,7 @@ fun SkipButton(forward: Boolean, size: Dp = 48.dp, tint: Color = Color.White, on
             val s = this.size.minDimension
             val c = Offset(this.size.width / 2, this.size.height / 2)
             val r = s * 0.40f
-            val w = s * 0.075f
+            val w = s * 0.092f
             val start = -75f
             scale(scaleX = if (forward) -1f else 1f, scaleY = 1f, pivot = c) {
                 drawArc(
@@ -312,7 +306,7 @@ fun SkipButton(forward: Boolean, size: Dp = 48.dp, tint: Color = Color.White, on
                 val py = c.y + r * sin(a).toFloat()
                 val dx = sin(a).toFloat(); val dy = -cos(a).toFloat()      // tangente
                 val nx = cos(a).toFloat(); val ny = sin(a).toFloat()       // normal
-                val len = s * 0.16f
+                val len = s * 0.19f
                 val path = Path().apply {
                     moveTo(px + dx * len, py + dy * len)
                     lineTo(px + nx * len * 0.75f, py + ny * len * 0.75f)
@@ -367,9 +361,9 @@ private fun MixCard() {
             }
             val t = a.track
             if (t == null) {
-                Text("Pon lluvia, mar o ruido blanco debajo de lo que escuchas.", Modifier.padding(top = 8.dp, bottom = 12.dp),
+                Text("Pon ruido blanco, marrón o del mar debajo de lo que escuchas.", Modifier.padding(top = 8.dp, bottom = 12.dp),
                     color = Aura.Slate300, fontFamily = Jakarta, fontSize = 13.sp)
-                GhostButton("Añadir sonido de fondo", { ui.pickAmbient = true }, Modifier.fillMaxWidth(), Icons.Rounded.Add)
+                GhostButton("Añadir ruido de fondo", { ui.pickAmbient = true }, Modifier.fillMaxWidth(), Icons.Rounded.Add)
             } else {
                 Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Cover(t.coverUri, Modifier.size(44.dp), RoundedCornerShape(10.dp), seed = t.title)
@@ -409,5 +403,96 @@ private fun VolumeRow(label: String, value: Float, onChange: (Float) -> Unit) {
         Text(label, Modifier.width(72.dp), color = Aura.Slate300, fontFamily = Jakarta, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         ThinSeekBar(value, onChange, onChange, Aura.Brand500, Aura.Slate700, Modifier.weight(1f))
         Text("${(value * 100).toInt()} %", Modifier.width(44.dp).padding(start = 8.dp), color = Aura.Slate400, fontFamily = Jakarta, fontSize = 11.sp)
+    }
+}
+
+/** Orbe con anillo de progreso fino y botón de pausa sutil en el centro. */
+@Composable
+private fun OrbPlayer(p: PlayerUi, isVideo: Boolean, onVideo: () -> Unit) {
+    val frac = if (p.durationMs > 0) (p.positionMs.toFloat() / p.durationMs).coerceIn(0f, 1f) else 0f
+    Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(270.dp), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxSize()) {
+                val sw = 2.dp.toPx()
+                val r = size.minDimension / 2 - 6.dp.toPx()
+                val tl = Offset(center.x - r, center.y - r)
+                drawCircle(Aura.Slate700, r, center, style = Stroke(sw))
+                drawArc(Aura.Brand500, -90f, 360f * frac, false, tl, Size(r * 2, r * 2), style = Stroke(sw, cap = StrokeCap.Round))
+                val a = Math.toRadians((-90f + 360f * frac).toDouble())
+                drawCircle(Aura.Brand500, 4.5.dp.toPx(), Offset(center.x + r * cos(a).toFloat(), center.y + r * sin(a).toFloat()))
+            }
+            Orb(Modifier.size(226.dp), breathing = p.isPlaying)
+            Box(
+                Modifier.size(70.dp).clip(CircleShape).background(Aura.Base.copy(alpha = 0.30f))
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
+                    .clickable { PlayerConnection.togglePlay() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(if (p.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (p.isPlaying) "Pausar" else "Reproducir",
+                    tint = Color(0xFFF2EEFF), modifier = Modifier.size(30.dp))
+            }
+            if (isVideo) Box(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp).clip(CircleShape)
+                    .background(Aura.Base.copy(alpha = 0.35f)).clickable(onClick = onVideo).padding(horizontal = 12.dp, vertical = 5.dp),
+            ) { Text("Ver vídeo", color = Color(0xFFF2EEFF), fontFamily = Jakarta, fontSize = 12.sp) }
+        }
+    }
+}
+
+/** Tiempo · barra fina · duración, en una sola línea. */
+@Composable
+private fun InlineSeek(p: PlayerUi) {
+    var dragging by remember { mutableStateOf(false) }
+    var dragValue by remember { mutableFloatStateOf(0f) }
+    val dur = p.durationMs.coerceAtLeast(1L).toFloat()
+    val value = if (dragging) dragValue else (p.positionMs / dur).coerceIn(0f, 1f)
+    Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(formatTime(if (dragging) (dragValue * dur).toLong() else p.positionMs), Modifier.width(52.dp), color = Aura.Slate400,
+            fontFamily = Jakarta, fontSize = 12.sp)
+        ThinSeekBar(value, { dragging = true; dragValue = it }, { f -> PlayerConnection.seekTo((f * dur).toLong()); dragging = false },
+            Aura.Brand500, Aura.Slate700, Modifier.weight(1f))
+        Text(formatTime(p.durationMs), Modifier.width(52.dp), color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End)
+    }
+}
+
+@Composable
+private fun SettingRow(
+    icon: ImageVector, label: String, value: String,
+    trailing: @Composable () -> Unit = {}, onClick: () -> Unit,
+) {
+    Column {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = Aura.Brand500, modifier = Modifier.size(21.dp))
+            Text(label, Modifier.weight(1f).padding(start = 14.dp), color = Color.White, fontFamily = Jakarta, fontSize = 15.sp)
+            Text(value, color = Aura.Slate400, fontFamily = Jakarta, fontSize = 14.sp)
+            trailing()
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Aura.Border))
+    }
+}
+
+/** Volúmenes de la mezcla (principal y ruido de fondo). */
+@Composable
+private fun MixDetails() {
+    val ui = LocalUi.current
+    val a by Ambient.state.collectAsState()
+    val t = a.track ?: return
+    Column(Modifier.padding(vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(t.title, Modifier.weight(1f), color = Aura.Slate300, fontFamily = Jakarta, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            PlainIcon(Icons.Rounded.SwapHoriz, 20.dp) { ui.pickAmbient = true }
+            PlainIcon(Icons.Rounded.Close, 20.dp) { Ambient.clear() }
+        }
+        VolumeRow("Principal", a.mainVolume) { Ambient.setMainVolume(it) }
+        VolumeRow("Fondo", a.volume) { Ambient.setVolume(it) }
+        Row(Modifier.fillMaxWidth().clickable { Ambient.setLinked(!a.linked) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Pausar junto con la principal", Modifier.weight(1f), color = Aura.Slate300, fontFamily = Jakarta, fontSize = 13.sp)
+            Switch(checked = a.linked, onCheckedChange = { Ambient.setLinked(it) },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Aura.OnAccent, checkedTrackColor = Aura.Brand500, checkedBorderColor = Aura.Brand500,
+                    uncheckedThumbColor = Aura.Slate400, uncheckedTrackColor = Aura.Slate900, uncheckedBorderColor = Aura.Border,
+                ))
+        }
     }
 }

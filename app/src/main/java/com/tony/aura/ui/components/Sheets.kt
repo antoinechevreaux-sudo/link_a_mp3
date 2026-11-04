@@ -132,8 +132,8 @@ fun TrackOptionsSheet(track: Track, playlistId: String?, onDismiss: () -> Unit) 
                 if (current.liked) "Quitar de Me gusta" else "Me gusta",
                 tint = if (current.liked) Aura.Brand400 else Aura.Slate200,
             ) { Library.toggleLike(current); onDismiss() }
-            if (!current.isVideo) SheetItem(Icons.Rounded.Layers, "Usar como sonido de fondo") {
-                Ambient.set(current); ui.toast("Sonando de fondo: ${current.title}"); onDismiss()
+            if (!current.isVideo) SheetItem(Icons.Rounded.Layers, "Usar como ruido de fondo") {
+                Ambient.set(current); ui.toast("Ruido de fondo: ${current.title}"); onDismiss()
             }
             SheetItem(Icons.AutoMirrored.Rounded.PlaylistAdd, "Añadir a una playlist") { ui.addToPlaylistFor = current; onDismiss() }
             if (playlist != null) SheetItem(Icons.Rounded.Delete, "Quitar de «${playlist.name}»") {
@@ -320,11 +320,11 @@ fun AmbientPickerSheet(onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Aura.Elevated,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 12.dp)) {
-            Kicker("Capa de fondo")
+            Kicker("Ruido de fondo")
             Text("Elige un sonido", color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Black, fontSize = 22.sp)
-            Text("Sonará en bucle a la vez que lo que estés escuchando. Consejo: descarga un vídeo de «lluvia 10 horas» como MP3.",
+            Text("Sonará en bucle a la vez que lo que estés escuchando. Consejo: descarga un vídeo de «ruido marrón 10 horas» como MP3.",
                 color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
-            OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("Buscar (lluvia, mar, ruido…)", fontFamily = Jakarta) },
+            OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("Buscar (ruido, mar, lluvia…)", fontFamily = Jakarta) },
                 colors = auraFieldColors(), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(8.dp))
             Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -394,8 +394,8 @@ fun SleepTimerSheet(onDismiss: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("Apagar también el sonido de fondo", color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                    Text(if (t.includeAmbient) "Se apaga todo" else "La lluvia sigue sonando", color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp)
+                    Text("Apagar también el ruido de fondo", color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text(if (t.includeAmbient) "Se apaga todo" else "El ruido de fondo sigue sonando", color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp)
                 }
                 androidx.compose.material3.Switch(
                     checked = t.includeAmbient, onCheckedChange = { SleepTimer.setIncludeAmbient(it) },

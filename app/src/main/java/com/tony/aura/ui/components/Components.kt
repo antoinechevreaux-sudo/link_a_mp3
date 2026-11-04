@@ -30,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -47,7 +49,7 @@ import com.tony.aura.ui.theme.Jakarta
 
 /** Resplandor rojo de la maqueta (shadow-red-glow). */
 fun Modifier.redGlow(shape: Shape, elevation: Dp = 18.dp, alpha: Float = 0.55f) =
-    this.shadow(elevation, shape, clip = false, ambientColor = Aura.Brand500.copy(alpha = alpha), spotColor = Aura.Brand500.copy(alpha = alpha))
+    this.shadow(elevation * 0.6f, shape, clip = false, ambientColor = Aura.Brand500.copy(alpha = alpha * 0.35f), spotColor = Aura.Brand500.copy(alpha = alpha * 0.35f))
 
 fun formatTime(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
@@ -125,16 +127,15 @@ fun AuraChip(label: String, selected: Boolean, onClick: () -> Unit, icon: ImageV
     val shape = CircleShape
     Row(
         Modifier
-            .then(if (selected) Modifier.redGlow(shape, 10.dp) else Modifier)
             .clip(shape)
-            .background(if (selected) Aura.Brand600 else Aura.Surface)
+            .background(if (selected) Aura.Brand500 else Color.Transparent)
             .border(1.dp, if (selected) Aura.Brand500 else Aura.Border, shape)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(6.dp)) }
-        Text(label, color = if (selected) Color.White else Aura.Slate300, fontFamily = Jakarta,
+        if (icon != null) { Icon(icon, null, tint = if (selected) Aura.OnAccent else Aura.Slate300, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(6.dp)) }
+        Text(label, color = if (selected) Aura.OnAccent else Aura.Slate400, fontFamily = Jakarta,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold, fontSize = 13.sp)
     }
 }
@@ -162,7 +163,8 @@ fun RoundButton(
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription, tint = if (enabled) tint else tint.copy(alpha = 0.35f), modifier = Modifier.size(iconSize))
+        val t = if (primary && tint == Color.White) Aura.OnAccent else tint
+        Icon(icon, contentDescription, tint = if (enabled) t else t.copy(alpha = 0.35f), modifier = Modifier.size(iconSize))
     }
 }
 
@@ -180,8 +182,8 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        if (icon != null) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)) }
-        Text(text, color = if (enabled) Color.White else Aura.Slate400, fontFamily = Jakarta, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+        if (icon != null) { Icon(icon, null, tint = if (enabled) Aura.OnAccent else Aura.Slate400, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)) }
+        Text(text, color = if (enabled) Aura.OnAccent else Aura.Slate400, fontFamily = Jakarta, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
     }
 }
 
@@ -284,25 +286,39 @@ fun AuraDivider() { Box(Modifier.fillMaxWidth().height(1.dp).background(Aura.Bor
 
 val BorderSubtle = BorderStroke(1.dp, Aura.Border)
 
-/** Icono de la app (el mismo del lanzador): degradado carmesí con ondas de sonido. */
+/** Icono de la app: orbe con auriculares. */
 @Composable
 fun AppLogo(modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(12.dp)
-    androidx.compose.foundation.Canvas(
-        modifier.redGlow(shape, 12.dp, 0.5f).clip(shape).background(Aura.RedButton)
-    ) {
-        val w = size.width
-        val h = size.height
-        val stroke = w * 0.085f
-        val bars = listOf(0.18f to 0.10f, 0.34f to 0.32f, 0.50f to 0.52f, 0.66f to 0.32f, 0.82f to 0.16f)
-        bars.forEach { (x, len) ->
-            drawLine(
-                Color.White,
-                androidx.compose.ui.geometry.Offset(w * x, h * (0.5f - len / 2)),
-                androidx.compose.ui.geometry.Offset(w * x, h * (0.5f + len / 2)),
-                strokeWidth = stroke,
-                cap = androidx.compose.ui.graphics.StrokeCap.Round,
-            )
-        }
-    }
+    androidx.compose.foundation.Image(
+        androidx.compose.ui.res.painterResource(com.tony.aura.R.drawable.logo_app), "Ember",
+        modifier = modifier.clip(RoundedCornerShape(12.dp)),
+    )
+}
+
+/** El orbe de la app; «respira» despacio mientras suena algo. */
+@Composable
+fun Orb(modifier: Modifier = Modifier, breathing: Boolean = false) {
+    val tr = androidx.compose.animation.core.rememberInfiniteTransition(label = "orbe")
+    val scale by tr.animateFloat(
+        1f, 1.035f,
+        androidx.compose.animation.core.infiniteRepeatable(
+            androidx.compose.animation.core.tween(4200, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            androidx.compose.animation.core.RepeatMode.Reverse,
+        ), label = "escala",
+    )
+    val turn by tr.animateFloat(
+        0f, 360f,
+        androidx.compose.animation.core.infiniteRepeatable(
+            androidx.compose.animation.core.tween(60000, easing = androidx.compose.animation.core.LinearEasing),
+        ), label = "giro",
+    )
+    androidx.compose.foundation.Image(
+        androidx.compose.ui.res.painterResource(com.tony.aura.R.drawable.orbe), null,
+        contentScale = ContentScale.Crop,
+        modifier = modifier.clip(CircleShape).graphicsLayer {
+            val s = if (breathing) scale else 1f
+            scaleX = s; scaleY = s
+            rotationZ = if (breathing) turn else 0f
+        },
+    )
 }

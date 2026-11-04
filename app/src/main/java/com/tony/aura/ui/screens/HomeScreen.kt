@@ -23,6 +23,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Pause
+import com.tony.aura.ui.components.Orb
+import com.tony.aura.ui.components.formatTime
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
@@ -104,48 +109,26 @@ fun HomeScreen() {
             item { CategoryList(filter, recent) }
             return@LazyColumn
         }
-        item {
-            // Accesos rápidos (2 columnas)
-            val tiles = buildList {
-                add(Tile("Tus me gusta", null, Icons.Rounded.Favorite, Special.LIKED))
-                add(Tile("Todo lo tuyo", lib.recent.firstOrNull()?.coverUri, Icons.Rounded.LibraryMusic, Special.ALL))
-                lib.playlists.take(4).forEach { p -> add(Tile(p.name, lib.tracksOf(p).firstOrNull()?.coverUri, Icons.Rounded.GraphicEq, p.id)) }
-                if (size < 4) add(Tile("Vídeos", lib.tracks.firstOrNull { it.isVideo }?.coverUri, Icons.Rounded.Movie, Special.VIDEOS))
-            }.take(6)
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                tiles.chunked(2).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        row.forEach { t -> QuickTile(t, Modifier.weight(1f)) { ui.openPlaylist = t.target } }
-                        if (row.size == 1) Spacer(Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-        item { Spacer(Modifier.height(22.dp)) }
-
-        if (recent.isEmpty()) {
+        // Seguir escuchando: lo que suena ahora o lo último escuchado
+        val resume = player.current ?: lib.recentlyPlayed.firstOrNull() ?: lib.recent.firstOrNull()
+        if (resume == null) {
             item {
                 EmptyState(
-                    Icons.Rounded.Download,
-                    "Tu música empieza aquí",
-                    "Pega un enlace de YouTube, SoundCloud, Instagram… y guárdalo en Ember o en tu teléfono.",
-                    "Ir al descargador",
+                    Icons.Rounded.Download, "Tu noche empieza aquí",
+                    "Pega un enlace de YouTube, SoundCloud, un podcast… y guárdalo en Ember.", "Ir al descargador",
                 ) { ui.tab = Tab.DOWNLOAD }
             }
         } else {
-            item { SectionTitle("Añadido recientemente", "Ver todo") { ui.openPlaylist = Special.ALL } }
+            item { ResumeOrb(resume, player.current?.id == resume.id && player.isPlaying) }
+            item { NightCards() }
+        }
+        val list = lib.recent.take(12)
+        if (list.isNotEmpty()) {
             item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    itemsIndexed(recent.take(12)) { i, t -> CoverCard(t) { ui.play(recent, i) } }
-                }
+                Text("RECIENTES", Modifier.padding(top = 22.dp, bottom = 2.dp), color = Aura.Slate400, fontFamily = Jakarta,
+                    fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 1.sp)
             }
-            val played = lib.recentlyPlayed.take(5)
-            if (played.isNotEmpty()) {
-                item { Column { Spacer(Modifier.height(18.dp)); SectionTitle("Escuchado recientemente") } }
-                itemsIndexed(played) { i, t ->
-                    TrackRow(t, onClick = { ui.play(played, i) }, onMore = { ui.optionsFor = t }, playing = player.current?.id == t.id)
-                }
-            }
+            itemsIndexed(list, key = { _, t -> t.id }) { i, t -> FlatRow(t, player.current?.id == t.id, { ui.play(list, i) }, { ui.optionsFor = t }) }
         }
     }
 }
@@ -213,5 +196,92 @@ private fun CategoryList(filter: HomeFilter, tracks: List<Track>) {
                 TrackRow(t, onClick = { ui.play(tracks, i) }, onMore = { ui.optionsFor = t }, playing = player.current?.id == t.id)
             }
         }
+    }
+}
+
+@Composable
+private fun ResumeOrb(t: Track, playing: Boolean) {
+    val ui = LocalUi.current
+    val p by PlayerConnection.ui.collectAsState()
+    val isCurrent = p.current?.id == t.id
+    val left = if (isCurrent && p.durationMs > 0) p.durationMs - p.positionMs else t.durationMs
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(212.dp).border(1.dp, Aura.Border, CircleShape), contentAlignment = Alignment.Center) {
+            Orb(Modifier.size(188.dp), breathing = playing)
+            // Botón sutil de reproducir/pausar
+            Box(
+                Modifier.size(62.dp).clip(CircleShape).background(Aura.Base.copy(alpha = 0.30f))
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
+                    .clickable {
+                        if (isCurrent) PlayerConnection.togglePlay()
+                        else ui.play(listOf(t), 0)
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pausar" else "Reproducir",
+                    tint = Color(0xFFF2EEFF), modifier = Modifier.size(28.dp))
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+        Text(if (isCurrent) "REPRODUCIENDO" else "SEGUIR ESCUCHANDO", color = Aura.Slate400, fontFamily = Jakarta,
+            fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 1.sp)
+        Text(t.title, Modifier.padding(top = 8.dp, start = 12.dp, end = 12.dp).clickable { ui.tab = Tab.PLAYER },
+            color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Light, fontSize = 21.sp,
+            maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(t.artist + if (left > 0) " · quedan ${formatTime(left)}" else "", Modifier.padding(top = 4.dp),
+            color = Aura.Slate400, fontFamily = Jakarta, fontSize = 13.sp, maxLines = 1)
+    }
+}
+
+/** Ruido de fondo y temporizador, en dos tarjetas pequeñas. */
+@Composable
+private fun NightCards() {
+    val ui = LocalUi.current
+    val amb by com.tony.aura.player.Ambient.state.collectAsState()
+    val timer = com.tony.aura.ui.components.rememberTimerLabel()
+    Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        SmallCard(Icons.Rounded.GraphicEq, "Ruido de fondo",
+            amb.track?.let { "${it.title.take(16)} · ${(amb.volume * 100).toInt()} %" } ?: "Elegir sonido", Modifier.weight(1f)) {
+            if (amb.track == null) ui.pickAmbient = true else ui.tab = Tab.PLAYER
+        }
+        SmallCard(Icons.Rounded.Bedtime, timer?.let { if (it == "Fin") "Al final" else it } ?: "Temporizador",
+            if (timer != null) "Apagado programado" else "Apagar al dormir", Modifier.weight(1f)) { ui.pickTimer = true }
+    }
+}
+
+@Composable
+private fun SmallCard(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, sub: String, modifier: Modifier, onClick: () -> Unit) {
+    Row(
+        modifier.clip(RoundedCornerShape(20.dp)).background(Aura.Surface).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = Aura.Brand500, modifier = Modifier.size(20.dp))
+        Column(Modifier.padding(start = 10.dp)) {
+            Text(title, color = Color.White, fontFamily = Jakarta, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(sub, color = Aura.Slate400, fontFamily = Jakarta, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** Fila plana con separador fino (estilo Luna azul). */
+@Composable
+fun FlatRow(t: Track, playing: Boolean, onClick: () -> Unit, onMore: () -> Unit) {
+    Column {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(Aura.Elevated), contentAlignment = Alignment.Center) {
+                if (t.coverUri != null) Cover(t.coverUri, Modifier.fillMaxSize(), RoundedCornerShape(14.dp), t.isVideo, t.title)
+                else Icon(if (t.isVideo) Icons.Rounded.Movie else Icons.Rounded.GraphicEq, null, tint = Aura.Slate400, modifier = Modifier.size(20.dp))
+            }
+            Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                Text(t.title, color = if (playing) Aura.Brand500 else Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${t.artist} · ${t.kind.label}", color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (t.durationMs > 0) Text(formatTime(t.durationMs), color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp)
+            Icon(Icons.Rounded.MoreVert, "Opciones", tint = Aura.Slate400,
+                modifier = Modifier.padding(start = 4.dp).clip(CircleShape).clickable(onClick = onMore).padding(6.dp).size(20.dp))
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Aura.Border))
     }
 }

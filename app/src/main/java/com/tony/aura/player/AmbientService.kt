@@ -59,13 +59,13 @@ class AmbientService : Service() {
         val s = Ambient.state.value
         val timer = SleepTimer.state.value
         val text = buildString {
-            append(if (s.playing) "Sonando de fondo en bucle" else "Fondo en pausa")
+            append(if (s.playing) "Ruido de fondo en bucle" else "Fondo en pausa")
             if (timer.endsAt > 0) append(" · se apaga a las ${SleepTimer.endsAtLabel()}")
         }
         return NotificationCompat.Builder(this, AuraApp.CH_AMBIENT)
             .setSmallIcon(R.drawable.ic_stat)
             .setColor(0xFFEF4444.toInt())
-            .setContentTitle(s.track?.title ?: "Sonido de fondo")
+            .setContentTitle(s.track?.title ?: "Ruido de fondo")
             .setContentText(text)
             .setOngoing(true).setSilent(true).setOnlyAlertOnce(true)
             .setContentIntent(PendingIntent.getActivity(

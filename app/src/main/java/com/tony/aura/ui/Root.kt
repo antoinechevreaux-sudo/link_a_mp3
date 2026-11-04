@@ -168,10 +168,9 @@ private fun MiniPlayer() {
         Modifier
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .fillMaxWidth()
-            .redGlow(shape, 14.dp, 0.35f)
             .clip(shape)
-            .background(Aura.Surface.copy(alpha = 0.96f))
-            .border(1.dp, Aura.Brand500.copy(alpha = 0.22f), shape)
+            .background(Aura.Elevated.copy(alpha = 0.97f))
+            .border(1.dp, Aura.Border, shape)
             .clickable {
                 ui.openPlaylist = null
                 if (t.isVideo) ui.videoFullscreen = true else ui.tab = Tab.PLAYER
@@ -211,27 +210,18 @@ private fun BottomNav() {
     ) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.06f)))
         Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().height(62.dp).padding(horizontal = 6.dp),
+            Modifier.fillMaxWidth().navigationBarsPadding().height(58.dp).padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             NavItem(Tab.HOME, Icons.Rounded.Home)
             NavItem(Tab.EXPLORE, Icons.Rounded.Explore)
-            // Botón central de descarga
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                val selected = ui.tab == Tab.DOWNLOAD && ui.openPlaylist == null
-                Box(
-                    Modifier.size(46.dp).offset(y = (-4).dp).redGlow(CircleShape, if (selected) 24.dp else 14.dp)
-                        .clip(CircleShape).background(Aura.RedButton)
-                        .clickable { ui.openPlaylist = null; ui.tab = Tab.DOWNLOAD },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Rounded.Download, "Descargar", tint = Color.White, modifier = Modifier.size(24.dp))
-                }
+                Row { NavItem(Tab.DOWNLOAD, Icons.Rounded.Download) }
                 if (active > 0) Box(
-                    Modifier.align(Alignment.TopEnd).offset(x = (-14).dp, y = 2.dp).size(18.dp).clip(CircleShape)
-                        .background(Color.White),
+                    Modifier.align(Alignment.TopCenter).offset(x = 12.dp, y = 2.dp).size(16.dp).clip(CircleShape)
+                        .background(Aura.Brand500),
                     contentAlignment = Alignment.Center,
-                ) { Text("$active", color = Aura.Brand600, fontFamily = Jakarta, fontWeight = FontWeight.Black, fontSize = 10.sp) }
+                ) { Text("$active", color = Aura.OnAccent, fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 9.sp) }
             }
             NavItem(Tab.LIBRARY, Icons.Rounded.LibraryMusic)
             NavItem(Tab.PLAYER, Icons.Rounded.Album)
@@ -248,12 +238,11 @@ private fun androidx.compose.foundation.layout.RowScope.NavItem(tab: Tab, icon: 
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                 ui.openPlaylist = null; ui.tab = tab
             }
-            .padding(vertical = 6.dp),
+            .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(icon, tab.label, tint = if (selected) Aura.Brand500 else Aura.Slate400, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.height(3.dp))
-        Text(tab.label, color = if (selected) Aura.Brand500 else Aura.Slate400, fontFamily = Jakarta,
-            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 10.sp)
+        Icon(icon, tab.label, tint = if (selected) Color.White else Aura.Slate400, modifier = Modifier.size(23.dp))
+        Spacer(Modifier.height(6.dp))
+        Box(Modifier.size(4.dp).clip(CircleShape).background(if (selected) Aura.Brand500 else Color.Transparent))
     }
 }
