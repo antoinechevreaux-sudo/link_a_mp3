@@ -26,7 +26,7 @@ object Settings {
         autoPip = p.getBoolean("pip", true)
     }
 
-    fun setFontScale(v: Float) { fontScale = v; prefs?.edit()?.putFloat("letra", v)?.apply() }
-    fun setVideoFullscreen(v: Boolean) { videoFullscreen = v; prefs?.edit()?.putBoolean("video_completa", v)?.apply() }
-    fun setAutoPip(v: Boolean) { autoPip = v; prefs?.edit()?.putBoolean("pip", v)?.apply() }
+    fun changeFontScale(v: Float) { fontScale = v; prefs?.edit()?.putFloat("letra", v)?.apply() }
+    fun changeVideoFullscreen(v: Boolean) { videoFullscreen = v; prefs?.edit()?.putBoolean("video_completa", v)?.apply() }
+    fun changeAutoPip(v: Boolean) { autoPip = v; prefs?.edit()?.putBoolean("pip", v)?.apply() }
 }

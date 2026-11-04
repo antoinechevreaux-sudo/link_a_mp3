@@ -64,7 +64,7 @@ fun SettingsScreen() {
         }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(Settings.FONT_SIZES) { (v, label) -> AuraChip(label, Settings.fontScale == v, { Settings.setFontScale(v) }) }
+                items(Settings.FONT_SIZES) { (v, label) -> AuraChip(label, Settings.fontScale == v, { Settings.changeFontScale(v) }) }
             }
         }
         item {
@@ -78,11 +78,11 @@ fun SettingsScreen() {
         item { Section("Vídeo") }
         item {
             ToggleSetting("Abrir vídeos a pantalla completa", "Si lo desactivas, empiezan en pequeño dentro del reproductor",
-                Settings.videoFullscreen) { Settings.setVideoFullscreen(it) }
+                Settings.videoFullscreen) { Settings.changeVideoFullscreen(it) }
         }
         item {
             ToggleSetting("Ventana flotante al salir", "Al ir a otra app durante un vídeo, sigue en una ventana pequeña",
-                Settings.autoPip) { Settings.setAutoPip(it) }
+                Settings.autoPip) { Settings.changeAutoPip(it) }
         }
         item { Section("Descargas") }
         item {
