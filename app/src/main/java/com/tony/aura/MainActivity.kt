@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
                 val factor = (conf.screenWidthDp / 420f).coerceIn(0.78f, 1f)
                 CompositionLocalProvider(
                     LocalUi provides remember { ui },
-                    LocalDensity provides Density(base.density * factor, base.fontScale.coerceAtMost(1.1f)),
+                    LocalDensity provides Density(base.density * factor, base.fontScale.coerceAtMost(1.1f) * Settings.fontScale),
                 ) {
                     AuraRoot()
                 }
@@ -59,6 +59,25 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleIntent(intent)
+    }
+
+    // Al salir de la app con un vídeo a pantalla completa → ventana flotante
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        val c = PlayerConnection.controller
+        if (Settings.autoPip && ui.videoFullscreen && c != null && c.isPlaying &&
+            PlayerConnection.ui.value.current?.isVideo == true) {
+            try {
+                enterPictureInPictureMode(
+                    android.app.PictureInPictureParams.Builder().setAspectRatio(android.util.Rational(16, 9)).build()
+                )
+            } catch (_: Throwable) {}
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        ui.inPip = isInPictureInPictureMode
     }
 
     override fun onStart() {

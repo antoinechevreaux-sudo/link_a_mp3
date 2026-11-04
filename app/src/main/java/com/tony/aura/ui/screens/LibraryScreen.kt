@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,6 +66,8 @@ fun LibraryScreen() {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 110.dp)) {
         item {
             ScreenHeader("Colección", "Tu biblioteca") {
+                RoundButton(Icons.Rounded.Settings, { ui.settingsOpen = true }, contentDescription = "Ajustes")
+                androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
                 RoundButton(Icons.Rounded.Add, { creating = true }, primary = true, contentDescription = "Nueva playlist")
             }
         }

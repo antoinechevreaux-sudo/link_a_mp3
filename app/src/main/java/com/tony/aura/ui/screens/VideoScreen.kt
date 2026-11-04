@@ -31,6 +31,8 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.ScreenRotation
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
+import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
@@ -79,7 +81,7 @@ private fun Context.findActivity(): Activity? {
 /** Vídeo a pantalla completa, en horizontal, con controles propios. */
 @OptIn(UnstableApi::class)
 @Composable
-fun VideoScreen(onClose: () -> Unit) {
+fun VideoScreen(pip: Boolean = false, onClose: () -> Unit) {
     val ctx = LocalContext.current
     val p by PlayerConnection.ui.collectAsState()
     var controls by remember { mutableStateOf(true) }
@@ -100,8 +102,8 @@ fun VideoScreen(onClose: () -> Unit) {
             act?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
-    LaunchedEffect(landscape) {
-        ctx.findActivity()?.requestedOrientation =
+    LaunchedEffect(landscape, pip) {
+        if (!pip) ctx.findActivity()?.requestedOrientation =
             if (landscape) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
     // Los controles se ocultan solos a los 3 s
@@ -112,8 +114,8 @@ fun VideoScreen(onClose: () -> Unit) {
 
     Box(
         Modifier.fillMaxSize().background(Color.Black)
-            .pointerInput(Unit) {
-                detectTapGestures(
+            .pointerInput(pip) {
+                if (!pip) detectTapGestures(
                     onTap = { controls = !controls; touch++ },
                     onDoubleTap = { o ->
                         if (o.x < size.width / 2) { PlayerConnection.back15(); flash = "−15 s" }
@@ -144,7 +146,7 @@ fun VideoScreen(onClose: () -> Unit) {
                 color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
         }
 
-        AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(controls && !pip, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize().background(
                 Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent, Color.Black.copy(alpha = 0.8f)))
             )) {
@@ -159,11 +161,13 @@ fun VideoScreen(onClose: () -> Unit) {
                     SpeedPill(speedLabel(p.speed), p.speed != 1f) { showSpeeds = !showSpeeds; touch++ }
                     Spacer(Modifier.width(6.dp))
                     PlainIcon(Icons.Rounded.ScreenRotation, 22.dp, Color.White) { landscape = !landscape; touch++ }
+                    PlainIcon(Icons.Rounded.PictureInPictureAlt, 22.dp, Color.White) { enterPip(ctx) }
+                    PlainIcon(Icons.Rounded.FullscreenExit, 24.dp, Color.White) { onClose() }
                 }
                 // Controles centrales
                 Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(64.dp)) {
-                    SkipButton(false, 52.dp) { PlayerConnection.back15(); touch++ }
+                    SkipButton(false, 52.dp, Color(0xFFE6E8F0)) { PlayerConnection.back15(); touch++ }
                     // Botón blanco como en YouTube
                     Box(
                         Modifier.size(64.dp).clip(CircleShape).background(Color.White)
@@ -173,7 +177,7 @@ fun VideoScreen(onClose: () -> Unit) {
                         Icon(if (p.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, "Reproducir",
                             tint = Color.Black, modifier = Modifier.size(34.dp))
                     }
-                    SkipButton(true, 52.dp) { PlayerConnection.forward15(); touch++ }
+                    SkipButton(true, 52.dp, Color(0xFFE6E8F0)) { PlayerConnection.forward15(); touch++ }
                 }
                 // Velocidades y barra de progreso
                 Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp, vertical = 8.dp)) {

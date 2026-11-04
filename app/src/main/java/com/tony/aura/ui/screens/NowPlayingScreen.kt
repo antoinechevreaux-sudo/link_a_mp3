@@ -56,6 +56,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -147,7 +148,7 @@ fun NowPlayingScreen() {
                 PlainIcon(Icons.Rounded.MoreHoriz, 26.dp, Color.White) { ui.optionsFor = t }
             }
         }
-        item { OrbPlayer(p, t.isVideo) { ui.videoFullscreen = true } }
+        item { if (t.isVideo) InlineVideo(p) else OrbPlayer(p, false) {} }
         item {
             Column(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(t.title, color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Normal, fontSize = 20.sp,
@@ -166,8 +167,8 @@ fun NowPlayingScreen() {
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly) {
                 SkipButton(false, 56.dp) { PlayerConnection.back15() }
-                PlainIcon(Icons.Rounded.SkipPrevious, 30.dp, Aura.Slate200) { PlayerConnection.previous() }
-                PlainIcon(Icons.Rounded.SkipNext, 30.dp, Aura.Slate200) { PlayerConnection.next() }
+                PlainIcon(Icons.Rounded.SkipPrevious, 28.dp, Aura.Slate400) { PlayerConnection.previous() }
+                PlainIcon(Icons.Rounded.SkipNext, 28.dp, Aura.Slate400) { PlayerConnection.next() }
                 SkipButton(true, 56.dp) { PlayerConnection.forward15() }
             }
         }
@@ -283,7 +284,7 @@ fun ThinSeekBar(
 
 /** Botón de salto de 15 s: flecha circular fina con el número dentro (como en YouTube). */
 @Composable
-fun SkipButton(forward: Boolean, size: Dp = 48.dp, tint: Color = Color.White, onClick: () -> Unit) {
+fun SkipButton(forward: Boolean, size: Dp = 48.dp, tint: Color = Aura.Slate300, onClick: () -> Unit) {
     Box(
         Modifier.size(size).clip(CircleShape).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -292,7 +293,7 @@ fun SkipButton(forward: Boolean, size: Dp = 48.dp, tint: Color = Color.White, on
             val s = this.size.minDimension
             val c = Offset(this.size.width / 2, this.size.height / 2)
             val r = s * 0.40f
-            val w = s * 0.092f
+            val w = s * 0.058f
             val start = -75f
             scale(scaleX = if (forward) -1f else 1f, scaleY = 1f, pivot = c) {
                 drawArc(
@@ -306,7 +307,7 @@ fun SkipButton(forward: Boolean, size: Dp = 48.dp, tint: Color = Color.White, on
                 val py = c.y + r * sin(a).toFloat()
                 val dx = sin(a).toFloat(); val dy = -cos(a).toFloat()      // tangente
                 val nx = cos(a).toFloat(); val ny = sin(a).toFloat()       // normal
-                val len = s * 0.19f
+                val len = s * 0.15f
                 val path = Path().apply {
                     moveTo(px + dx * len, py + dy * len)
                     lineTo(px + nx * len * 0.75f, py + ny * len * 0.75f)
@@ -316,7 +317,7 @@ fun SkipButton(forward: Boolean, size: Dp = 48.dp, tint: Color = Color.White, on
                 drawPath(path, tint)
             }
         }
-        Text("15", Modifier.padding(top = size * 0.06f), color = tint, fontFamily = Jakarta, fontWeight = FontWeight.ExtraBold,
+        Text("15", Modifier.padding(top = size * 0.06f), color = tint, fontFamily = Jakarta, fontWeight = FontWeight.Medium,
             fontSize = (size.value * 0.26f).sp)
     }
 }
@@ -495,4 +496,56 @@ private fun MixDetails() {
                 ))
         }
     }
+}
+
+/** Vídeo en pequeño dentro del reproductor, con botones para pantalla completa y ventana flotante. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@Composable
+private fun InlineVideo(p: PlayerUi) {
+    val ui = LocalUi.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    Box(Modifier.fillMaxWidth().padding(top = 8.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(22.dp)).background(Color.Black)) {
+        if (!ui.videoFullscreen && !ui.inPip) androidx.compose.ui.viewinterop.AndroidView(
+            factory = { c ->
+                androidx.media3.ui.PlayerView(c).apply {
+                    useController = false
+                    resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    setShutterBackgroundColor(android.graphics.Color.BLACK)
+                    player = PlayerConnection.controller
+                }
+            },
+            onRelease = { v -> v.player = null },
+            modifier = Modifier.fillMaxSize().clickable { PlayerConnection.togglePlay() },
+        )
+        if (!p.isPlaying) Box(
+            Modifier.align(Alignment.Center).size(60.dp).clip(CircleShape).background(Aura.Base.copy(alpha = 0.45f))
+                .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape).clickable { PlayerConnection.togglePlay() },
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.Rounded.PlayArrow, "Reproducir", tint = Color(0xFFF2EEFF), modifier = Modifier.size(28.dp)) }
+        Row(Modifier.align(Alignment.BottomEnd).padding(8.dp)) {
+            VideoChipButton(Icons.Rounded.PictureInPictureAlt, "Ventana flotante") { enterPip(ctx) }
+            Spacer(Modifier.width(6.dp))
+            VideoChipButton(Icons.Rounded.Fullscreen, "Pantalla completa") { ui.videoFullscreen = true }
+        }
+    }
+}
+
+@Composable
+private fun VideoChipButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+    Box(Modifier.size(38.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center) {
+        Icon(icon, label, tint = Color(0xFFF2EEFF), modifier = Modifier.size(20.dp))
+    }
+}
+
+/** Ventana flotante (imagen en imagen) para seguir viendo el vídeo sobre otras apps. */
+fun enterPip(ctx: android.content.Context) {
+    var c: android.content.Context? = ctx
+    while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
+    val act = c as? android.app.Activity ?: return
+    try {
+        act.enterPictureInPictureMode(
+            android.app.PictureInPictureParams.Builder().setAspectRatio(android.util.Rational(16, 9)).build()
+        )
+    } catch (_: Throwable) {}
 }

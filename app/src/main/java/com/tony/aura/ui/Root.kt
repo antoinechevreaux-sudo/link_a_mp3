@@ -90,9 +90,10 @@ fun AuraRoot() {
         player.error?.let { Toast.makeText(ctx, it, Toast.LENGTH_LONG).show() }
     }
 
-    BackHandler(enabled = ui.videoFullscreen || ui.openPlaylist != null || ui.tab != Tab.HOME) {
+    BackHandler(enabled = ui.videoFullscreen || ui.settingsOpen || ui.openPlaylist != null || ui.tab != Tab.HOME) {
         when {
-            ui.videoFullscreen -> ui.videoFullscreen = false
+            ui.videoFullscreen -> { ui.videoFullscreen = false; ui.tab = Tab.PLAYER }
+            ui.settingsOpen -> ui.settingsOpen = false
             ui.openPlaylist != null -> ui.openPlaylist = null
             else -> ui.tab = Tab.HOME
         }
@@ -108,9 +109,9 @@ fun AuraRoot() {
         }
 
         AnimatedVisibility(
-            visible = ui.videoFullscreen && player.current?.isVideo == true,
+            visible = (ui.videoFullscreen || ui.inPip) && player.current?.isVideo == true,
             enter = fadeIn(), exit = fadeOut(),
-        ) { VideoScreen(onClose = { ui.videoFullscreen = false }) }
+        ) { VideoScreen(pip = ui.inPip, onClose = { ui.videoFullscreen = false; ui.tab = Tab.PLAYER }) }
     }
 
     ui.optionsFor?.let { t -> TrackOptionsSheet(t, ui.openPlaylist, onDismiss = { ui.optionsFor = null }) }
@@ -147,6 +148,11 @@ private fun ContentArea() {
                         if (id != null) PlaylistScreen(id)
                     }
                 }
+                AnimatedVisibility(
+                    visible = ui.settingsOpen,
+                    enter = slideInHorizontally { it } + fadeIn(),
+                    exit = slideOutHorizontally { it } + fadeOut(),
+                ) { Box(Modifier.fillMaxSize().background(Aura.Base)) { com.tony.aura.ui.screens.SettingsScreen() } }
                 // Mini reproductor
                 val showMini = player.current != null && (ui.tab != Tab.PLAYER || ui.openPlaylist != null)
                 AnimatedVisibility(
@@ -172,8 +178,8 @@ private fun MiniPlayer() {
             .background(Aura.Elevated.copy(alpha = 0.97f))
             .border(1.dp, Aura.Border, shape)
             .clickable {
-                ui.openPlaylist = null
-                if (t.isVideo) ui.videoFullscreen = true else ui.tab = Tab.PLAYER
+                ui.openPlaylist = null; ui.settingsOpen = false
+                ui.tab = Tab.PLAYER
             },
     ) {
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -236,7 +242,7 @@ private fun androidx.compose.foundation.layout.RowScope.NavItem(tab: Tab, icon: 
     Column(
         Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                ui.openPlaylist = null; ui.tab = tab
+                ui.openPlaylist = null; ui.settingsOpen = false; ui.tab = tab
             }
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

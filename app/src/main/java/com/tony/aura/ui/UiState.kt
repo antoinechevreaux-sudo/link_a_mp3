@@ -32,12 +32,16 @@ class UiState {
     var sharedUrl by mutableStateOf<String?>(null)
     var pickAmbient by mutableStateOf(false)
     var pickTimer by mutableStateOf(false)
+    var settingsOpen by mutableStateOf(false)
+    var inPip by mutableStateOf(false)
     var message by mutableStateOf<String?>(null)
 
     fun play(tracks: List<Track>, index: Int = 0, shuffle: Boolean = false) {
         if (tracks.isEmpty()) return
         PlayerConnection.play(tracks, index, shuffle)
-        if (tracks[index.coerceIn(tracks.indices)].isVideo) videoFullscreen = true
+        if (tracks[index.coerceIn(tracks.indices)].isVideo) {
+            if (com.tony.aura.Settings.videoFullscreen) videoFullscreen = true else tab = Tab.PLAYER
+        }
     }
 
     fun toast(text: String) { message = text }

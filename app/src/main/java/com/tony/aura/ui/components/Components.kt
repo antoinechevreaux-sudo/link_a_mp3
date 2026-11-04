@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material3.Icon
@@ -70,20 +71,7 @@ fun Cover(
     seed: String = "",
 ) {
     Box(modifier.clip(shape)) {
-        val fallback: @Composable () -> Unit = {
-            val hue = (seed.hashCode() and 0x7fffffff) % 3
-            val brush = when (hue) {
-                0 -> Brush.linearGradient(listOf(Aura.Brand600, Aura.Rose700))
-                1 -> Brush.linearGradient(listOf(Aura.Brand900, Aura.Slate800))
-                else -> Brush.linearGradient(listOf(Aura.Rose700, Aura.Slate900))
-            }
-            Box(Modifier.fillMaxSize().background(brush), contentAlignment = Alignment.Center) {
-                Icon(
-                    if (isVideo) Icons.Rounded.Movie else Icons.Rounded.MusicNote, null,
-                    tint = Color.White.copy(alpha = 0.75f), modifier = Modifier.size(22.dp),
-                )
-            }
-        }
+        val fallback: @Composable () -> Unit = { DefaultCover(isVideo, seed) }
         if (uri.isNullOrBlank()) fallback()
         else SubcomposeAsyncImage(
             model = uri, contentDescription = null, contentScale = ContentScale.Crop,
@@ -322,4 +310,30 @@ fun Orb(modifier: Modifier = Modifier, breathing: Boolean = false) {
             rotationZ = if (breathing) turn else 0f
         },
     )
+}
+
+/**
+ * Portada por defecto cuando el archivo no tiene imagen: el orbe de Ember,
+ * girado y con un matiz distinto según el título, y un icono suave encima.
+ */
+@Composable
+fun DefaultCover(isVideo: Boolean, seed: String) {
+    val h = seed.hashCode() and 0x7fffffff
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        Modifier.fillMaxSize().background(Aura.Elevated), contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.foundation.Image(
+            androidx.compose.ui.res.painterResource(com.tony.aura.R.drawable.orbe), null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().graphicsLayer {
+                rotationZ = (h % 360).toFloat()
+                val z = 1.25f + (h % 40) / 100f
+                scaleX = z; scaleY = z
+            },
+        )
+        Icon(
+            if (isVideo) Icons.Rounded.Movie else androidx.compose.material.icons.Icons.Rounded.Headphones, null,
+            tint = Color(0xFFF2EEFF).copy(alpha = 0.82f), modifier = Modifier.size(maxWidth * 0.36f),
+        )
+    }
 }

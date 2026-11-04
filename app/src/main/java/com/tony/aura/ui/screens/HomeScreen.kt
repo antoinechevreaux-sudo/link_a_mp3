@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Pause
 import com.tony.aura.ui.components.Orb
@@ -100,9 +101,11 @@ fun HomeScreen() {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
                 AppLogo(Modifier.size(40.dp))
                 Spacer(Modifier.width(10.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 6.dp)) {
+                LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 6.dp)) {
                     items(HomeFilter.entries) { f -> AuraChip(f.label, f == filter, { filter = f }) }
                 }
+                Icon(Icons.Rounded.Settings, "Ajustes", tint = Aura.Slate400,
+                    modifier = Modifier.padding(start = 4.dp).clip(CircleShape).clickable { ui.settingsOpen = true }.padding(8.dp).size(22.dp))
             }
         }
         if (filter != HomeFilter.ALL) {
@@ -268,10 +271,7 @@ private fun SmallCard(icon: androidx.compose.ui.graphics.vector.ImageVector, tit
 fun FlatRow(t: Track, playing: Boolean, onClick: () -> Unit, onMore: () -> Unit) {
     Column {
         Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(Aura.Elevated), contentAlignment = Alignment.Center) {
-                if (t.coverUri != null) Cover(t.coverUri, Modifier.fillMaxSize(), RoundedCornerShape(14.dp), t.isVideo, t.title)
-                else Icon(if (t.isVideo) Icons.Rounded.Movie else Icons.Rounded.GraphicEq, null, tint = Aura.Slate400, modifier = Modifier.size(20.dp))
-            }
+            Cover(t.coverUri, Modifier.size(46.dp), RoundedCornerShape(14.dp), t.isVideo, t.title)
             Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                 Text(t.title, color = if (playing) Aura.Brand500 else Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Medium,
                     fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

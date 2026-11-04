@@ -10,6 +10,7 @@ class AuraApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Library.init(this)
+        Settings.init(this)
         com.tony.aura.player.Ambient.init(this)
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CH_DOWNLOADS, "Descargas en curso", NotificationManager.IMPORTANCE_LOW))
