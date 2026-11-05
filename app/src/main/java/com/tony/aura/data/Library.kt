@@ -159,6 +159,11 @@ object Library {
         }
     }
 
+    /** Nuevo orden de una playlist (arrastrando o por fecha). */
+    fun reorderPlaylist(playlistId: String, ids: List<String>) {
+        mutate { s -> s.copy(playlists = s.playlists.map { if (it.id == playlistId) it.copy(trackIds = ids.filter { i -> i in it.trackIds }) else it }) }
+    }
+
     fun removeFromPlaylist(playlistId: String, trackId: String) {
         mutate { s -> s.copy(playlists = s.playlists.map { if (it.id == playlistId) it.copy(trackIds = it.trackIds - trackId) else it }) }
     }

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -139,6 +140,7 @@ fun TrackOptionsSheet(track: Track, playlistId: String?, onDismiss: () -> Unit) 
             if (playlist != null) SheetItem(Icons.Rounded.Delete, "Quitar de «${playlist.name}»") {
                 Library.removeFromPlaylist(playlist.id, current.id); onDismiss()
             }
+            SheetItem(Icons.Rounded.ContentCut, "Editar clip (cortar, recortar, fundidos)") { ui.editClip = current; onDismiss() }
             if (!current.fromDevice) {
                 SheetItem(Icons.Rounded.Edit, "Editar título, artista y tipo") { ui.editTrack = current; onDismiss() }
                 SheetItem(Icons.Rounded.PhoneAndroid, if (current.deviceUri != null) "Ya está en el dispositivo" else "Guardar en el dispositivo") {

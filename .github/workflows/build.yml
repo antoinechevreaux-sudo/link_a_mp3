@@ -45,7 +45,7 @@ jobs:
       - name: Publicar versión
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.0.${{ github.run_number }}
-          name: Ember 4.0.${{ github.run_number }}
+          tag_name: v4.1.${{ github.run_number }}
+          name: Ember 4.1.${{ github.run_number }}
           files: Ember.apk
           make_latest: true

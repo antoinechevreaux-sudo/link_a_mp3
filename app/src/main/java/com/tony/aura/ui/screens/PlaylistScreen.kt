@@ -25,6 +25,10 @@ import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.ui.draw.shadow
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -87,9 +91,38 @@ fun PlaylistScreen(id: String) {
         Special.AUDIOBOOKS -> Triple("Categoría", "Audiolibros", lib.recent.filter { it.kind == Kind.AUDIOBOOK })
         else -> Triple("Playlist", playlist?.name ?: "Playlist", playlist?.let { lib.tracksOf(it) } ?: emptyList())
     }
+    var viewSort by androidx.compose.runtime.saveable.rememberSaveable(id) { mutableStateOf(0) }
+    var sortMenu by remember { mutableStateOf(false) }
+    val sorted = remember(tracks, viewSort, playlist) {
+        if (playlist != null) tracks else when (viewSort) {
+            1 -> tracks.sortedByDescending { it.addedAt }
+            2 -> tracks.sortedBy { it.addedAt }
+            3 -> tracks.sortedBy { it.title.lowercase() }
+            else -> tracks
+        }
+    }
+    // Copia local para poder arrastrar con fluidez; se guarda al soltar
+    var local by remember(sorted) { mutableStateOf(sorted) }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val reorder = rememberReorderableLazyListState(listState) { from, to ->
+        val f = local.indexOfFirst { it.id == from.key }
+        val tt = local.indexOfFirst { it.id == to.key }
+        if (f >= 0 && tt >= 0) local = local.toMutableList().apply { add(tt, removeAt(f)) }
+    }
+    fun applySort(mode: Int) {
+        if (playlist != null) {
+            val ids = when (mode) {
+                1 -> tracks.sortedByDescending { it.addedAt }
+                2 -> tracks.sortedBy { it.addedAt }
+                3 -> tracks.sortedBy { it.title.lowercase() }
+                else -> tracks
+            }.map { it.id }
+            Library.reorderPlaylist(playlist.id, ids)
+        } else viewSort = mode
+    }
     val total = tracks.sumOf { it.durationMs }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 110.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 110.dp)) {
         item {
             Box(Modifier.fillMaxWidth()) {
                 // Cabecera con degradado carmesí
@@ -100,6 +133,26 @@ fun PlaylistScreen(id: String) {
                     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, { ui.openPlaylist = null }, size = 38.dp, contentDescription = "Atrás")
                         Spacer(Modifier.weight(1f))
+                        if (tracks.size > 1) Box {
+                            RoundButton(Icons.Rounded.SwapVert, { sortMenu = true }, size = 38.dp, contentDescription = "Ordenar")
+                            DropdownMenu(sortMenu, { sortMenu = false }, containerColor = Aura.Elevated) {
+                                val opts = buildList {
+                                    if (playlist == null) add(0 to "Orden por defecto")
+                                    add(1 to "Más reciente primero"); add(2 to "Más antiguo primero"); add(3 to "Título A–Z")
+                                }
+                                opts.forEach { (m, label) ->
+                                    DropdownMenuItem(
+                                        text = { Text(label, fontFamily = Jakarta, color = if (playlist == null && viewSort == m) Aura.Brand500 else Color.White) },
+                                        onClick = { sortMenu = false; applySort(m) },
+                                    )
+                                }
+                                if (playlist != null) DropdownMenuItem(
+                                    text = { Text("Manual: mantén pulsado y arrastra", fontFamily = Jakarta, color = Aura.Slate400, fontSize = 12.sp) },
+                                    onClick = { sortMenu = false },
+                                )
+                            }
+                        }
+                        Spacer(Modifier.size(8.dp))
                         if (playlist != null) Box {
                             RoundButton(Icons.Rounded.MoreHoriz, { menu = true }, size = 38.dp, contentDescription = "Más")
                             DropdownMenu(menu, { menu = false }, containerColor = Aura.Elevated) {
@@ -133,9 +186,9 @@ fun PlaylistScreen(id: String) {
                     Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Spacer(Modifier.weight(1f))
-                        RoundButton(Icons.Rounded.Shuffle, { ui.play(tracks, (tracks.indices).random(), shuffle = true) },
+                        RoundButton(Icons.Rounded.Shuffle, { ui.play(local, (local.indices).random(), shuffle = true) },
                             size = 46.dp, enabled = tracks.isNotEmpty(), contentDescription = "Aleatorio")
-                        RoundButton(Icons.Rounded.PlayArrow, { ui.play(tracks, 0) }, size = 56.dp, iconSize = 30.dp,
+                        RoundButton(Icons.Rounded.PlayArrow, { ui.play(local, 0) }, size = 56.dp, iconSize = 30.dp,
                             primary = true, enabled = tracks.isNotEmpty(), contentDescription = "Reproducir")
                     }
                 }
@@ -149,9 +202,21 @@ fun PlaylistScreen(id: String) {
                 "Descarga algo y elige esta playlist como destino, o añade canciones desde su menú ⋮.",
                 "Ir al descargador") { ui.openPlaylist = null; ui.tab = Tab.DOWNLOAD }
         }
-        itemsIndexed(tracks, key = { _, t -> t.id }) { i, t ->
-            Box(Modifier.padding(horizontal = 16.dp)) {
-                TrackRow(t, { ui.play(tracks, i) }, { ui.optionsFor = t }, playing = player.current?.id == t.id, index = i + 1)
+        if (playlist != null && local.size > 1) item {
+            Text("Mantén pulsada una canción y arrástrala para cambiar el orden", Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
+                color = Aura.Slate400, fontFamily = Jakarta, fontSize = 11.sp)
+        }
+        itemsIndexed(local, key = { _, t -> t.id }) { i, t ->
+            if (playlist != null) ReorderableItem(reorder, key = t.id) { dragging ->
+                Box(
+                    Modifier.padding(horizontal = 16.dp)
+                        .longPressDraggableHandle(onDragStopped = { Library.reorderPlaylist(playlist.id, local.map { it.id }) })
+                        .then(if (dragging) Modifier.shadow(16.dp, RoundedCornerShape(14.dp)) else Modifier),
+                ) {
+                    TrackRow(t, { ui.play(local, i) }, { ui.optionsFor = t }, playing = player.current?.id == t.id, index = i + 1)
+                }
+            } else Box(Modifier.padding(horizontal = 16.dp)) {
+                TrackRow(t, { ui.play(local, i) }, { ui.optionsFor = t }, playing = player.current?.id == t.id, index = i + 1)
             }
         }
     }

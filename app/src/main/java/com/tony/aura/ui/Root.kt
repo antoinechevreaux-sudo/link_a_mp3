@@ -90,8 +90,9 @@ fun AuraRoot() {
         player.error?.let { Toast.makeText(ctx, it, Toast.LENGTH_LONG).show() }
     }
 
-    BackHandler(enabled = ui.videoFullscreen || ui.settingsOpen || ui.openPlaylist != null || ui.tab != Tab.HOME) {
+    BackHandler(enabled = ui.editClip != null || ui.videoFullscreen || ui.settingsOpen || ui.openPlaylist != null || ui.tab != Tab.HOME) {
         when {
+            ui.editClip != null -> ui.editClip = null
             ui.videoFullscreen -> { ui.videoFullscreen = false; ui.tab = Tab.PLAYER }
             ui.settingsOpen -> ui.settingsOpen = false
             ui.openPlaylist != null -> ui.openPlaylist = null
@@ -106,6 +107,14 @@ fun AuraRoot() {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) { ContentArea() }
             BottomNav()
+        }
+
+        AnimatedVisibility(
+            visible = ui.editClip != null,
+            enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut(),
+        ) {
+            val t = remember(ui.editClip?.id) { ui.editClip }
+            if (t != null) com.tony.aura.ui.screens.EditorScreen(t) { ui.editClip = null }
         }
 
         AnimatedVisibility(

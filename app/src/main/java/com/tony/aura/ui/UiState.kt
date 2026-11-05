@@ -33,6 +33,7 @@ class UiState {
     var pickAmbient by mutableStateOf(false)
     var pickTimer by mutableStateOf(false)
     var settingsOpen by mutableStateOf(false)
+    var editClip by mutableStateOf<Track?>(null)
     var inPip by mutableStateOf(false)
     var message by mutableStateOf<String?>(null)
 

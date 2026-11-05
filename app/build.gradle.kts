@@ -16,7 +16,7 @@ android {
         minSdk = 29
         targetSdk = 34
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
-        versionName = "4.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
+        versionName = "4.1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
@@ -74,6 +74,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("sh.calvin.reorderable:reorderable:2.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")
 }
