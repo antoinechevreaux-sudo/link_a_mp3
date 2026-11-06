@@ -19,6 +19,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import com.tony.aura.ui.components.Orb
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Add
@@ -145,6 +146,7 @@ fun NowPlayingScreen() {
                     Text(if (p.queue.size > 1) "${p.index + 1} de ${p.queue.size}" else "Ember", color = Aura.Slate200,
                         fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
+                PlainIcon(Icons.AutoMirrored.Rounded.QueueMusic, 24.dp, Color.White) { ui.queueOpen = true }
                 PlainIcon(Icons.Rounded.MoreHoriz, 26.dp, Color.White) { ui.optionsFor = t }
             }
         }
@@ -202,6 +204,7 @@ fun NowPlayingScreen() {
                         if (p.repeatMode != Player.REPEAT_MODE_OFF) Aura.Brand500 else Aura.Slate400,
                     ) { PlayerConnection.cycleRepeat() }
                     if (t.isVideo) PlainIcon(Icons.Rounded.Fullscreen, 24.dp, Aura.Slate200) { ui.videoFullscreen = true }
+                    PlainIcon(Icons.AutoMirrored.Rounded.QueueMusic, 22.dp, Aura.Slate400) { ui.queueOpen = true }
                 }
             }
         }

@@ -34,6 +34,7 @@ class UiState {
     var pickTimer by mutableStateOf(false)
     var settingsOpen by mutableStateOf(false)
     var editClip by mutableStateOf<Track?>(null)
+    var queueOpen by mutableStateOf(false)
     var inPip by mutableStateOf(false)
     var message by mutableStateOf<String?>(null)
 

@@ -28,6 +28,13 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.RemoveCircleOutline
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ContentCut
@@ -411,5 +418,104 @@ fun SleepTimerSheet(onDismiss: () -> Unit) {
                 SleepTimer.cancel(); ui.toast("Temporizador cancelado"); onDismiss()
             }
         }
+    }
+}
+
+/** Fila de reproducción: lo que suena y lo que viene; arrastrar para ordenar, quitar, vaciar. */
+@Composable
+fun QueueSheet(onDismiss: () -> Unit) {
+    val ui = LocalUi.current
+    val p by PlayerConnection.ui.collectAsState()
+    var editing by remember { mutableStateOf(false) }
+    // Clave estable por pista (id + nº de aparición) para que arrastrar no se rompa al refrescar
+    fun keyed(q: List<Track>): List<Pair<String, Track>> {
+        val seen = HashMap<String, Int>()
+        return q.map { t -> val n = (seen[t.id] ?: 0) + 1; seen[t.id] = n; "${t.id}#$n" to t }
+    }
+    var local by remember(p.queue) { mutableStateOf(keyed(p.queue)) }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val reorder = sh.calvin.reorderable.rememberReorderableLazyListState(listState) { from, to ->
+        val f = local.indexOfFirst { it.first == from.key }
+        val t = local.indexOfFirst { it.first == to.key }
+        if (f >= 0 && t >= 0 && f != p.index && t != p.index) {
+            local = local.toMutableList().apply { add(t, removeAt(f)) }
+            PlayerConnection.move(f, t)
+        }
+    }
+    val remaining = p.queue.drop(p.index + 1).sumOf { it.durationMs } + (p.durationMs - p.positionMs).coerceAtLeast(0)
+
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Aura.Elevated,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Fila de reproducción", color = Color.White, fontFamily = Jakarta, fontSize = 22.sp)
+                    Text("${(p.queue.size - p.index - 1).coerceAtLeast(0)} a continuación · quedan ${formatTime(remaining)}",
+                        color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp)
+                }
+                QueuePill("Borrar") { PlayerConnection.clearUpcoming(); ui.toast("Cola vaciada") }
+                Spacer(Modifier.width(8.dp))
+                QueuePill(if (editing) "Listo" else "Editar", active = editing) { editing = !editing }
+            }
+            Spacer(Modifier.height(12.dp))
+            androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f, fill = false).heightIn(max = 460.dp), state = listState) {
+                items(local, key = { it.first }) { (qi, t) ->
+                    val pos = local.indexOfFirst { it.first == qi }
+                    val isCur = pos == p.index
+                    sh.calvin.reorderable.ReorderableItem(reorder, key = qi, enabled = !isCur) { dragging ->
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                                .background(if (dragging) Aura.Slate800 else Color.Transparent)
+                                .clickable { PlayerConnection.skipToIndex(pos) }
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (editing && !isCur) Icon(Icons.Rounded.RemoveCircleOutline, "Quitar", tint = Aura.Brand400,
+                                modifier = Modifier.clip(CircleShape).clickable { PlayerConnection.removeAt(pos) }.padding(6.dp).size(22.dp))
+                            Cover(t.coverUri, Modifier.size(50.dp), RoundedCornerShape(12.dp), t.isVideo, t.title)
+                            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                                Text(t.title, color = if (isCur) Aura.Brand500 else Color.White, fontFamily = Jakarta, fontSize = 15.sp,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(t.artist + if (t.durationMs > 0) " · ${formatTime(t.durationMs)}" else "", color = Aura.Slate400,
+                                    fontFamily = Jakarta, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            if (isCur) Box(
+                                Modifier.size(42.dp).clip(CircleShape).background(Color(0xFFF2EEFF)).clickable { PlayerConnection.togglePlay() },
+                                contentAlignment = Alignment.Center,
+                            ) { Icon(if (p.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, "Reproducir", tint = Aura.Base) }
+                            else Icon(Icons.Rounded.DragHandle, "Arrastrar para ordenar", tint = Aura.Slate300,
+                                modifier = Modifier.draggableHandle().padding(8.dp).size(24.dp))
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                val timer = rememberTimerLabel()
+                QueueTile(Icons.Rounded.Bedtime, when (timer) { null -> "Temporizador"; "Fin" -> "Al final"; else -> timer }, Modifier.weight(1f)) {
+                    onDismiss(); ui.pickTimer = true
+                }
+                QueueTile(null, com.tony.aura.ui.screens.speedLabel(p.speed), Modifier.weight(1f), sub = "Velocidad") { PlayerConnection.cycleSpeed() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QueuePill(text: String, active: Boolean = false, onClick: () -> Unit) {
+    Text(text, Modifier.clip(CircleShape).background(if (active) Aura.Brand500 else Aura.Slate800).clickable(onClick = onClick)
+        .padding(horizontal = 16.dp, vertical = 9.dp), color = if (active) Aura.OnAccent else Color.White, fontFamily = Jakarta, fontSize = 14.sp)
+}
+
+@Composable
+private fun QueueTile(icon: ImageVector?, title: String, modifier: Modifier, sub: String? = null, onClick: () -> Unit) {
+    Column(
+        modifier.clip(RoundedCornerShape(16.dp)).background(Aura.Slate800).clickable(onClick = onClick).padding(vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (icon != null) Icon(icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
+        else Text(title, color = Color.White, fontFamily = Jakarta, fontSize = 20.sp)
+        Spacer(Modifier.height(4.dp))
+        Text(if (icon != null) title else (sub ?: ""), color = Aura.Slate300, fontFamily = Jakarta, fontSize = 13.sp)
     }
 }

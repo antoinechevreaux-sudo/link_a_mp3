@@ -126,6 +126,7 @@ fun AuraRoot() {
     ui.optionsFor?.let { t -> TrackOptionsSheet(t, ui.openPlaylist, onDismiss = { ui.optionsFor = null }) }
     ui.addToPlaylistFor?.let { t -> AddToPlaylistSheet(t, onDismiss = { ui.addToPlaylistFor = null }) }
     ui.editTrack?.let { t -> EditTrackDialog(t, onDismiss = { ui.editTrack = null }) }
+    if (ui.queueOpen) com.tony.aura.ui.components.QueueSheet(onDismiss = { ui.queueOpen = false })
     if (ui.pickAmbient) com.tony.aura.ui.components.AmbientPickerSheet(onDismiss = { ui.pickAmbient = false })
     if (ui.pickTimer) com.tony.aura.ui.components.SleepTimerSheet(onDismiss = { ui.pickTimer = false })
 }

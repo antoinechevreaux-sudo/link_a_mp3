@@ -43,6 +43,8 @@ object PlayerConnection {
     private var connecting = false
     private val pending = mutableListOf<(MediaController) -> Unit>()
     private var queue: List<Track> = emptyList()
+    /** Pistas conocidas por id, para reconstruir la cola desde el reproductor */
+    private val known = HashMap<String, Track>()
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) = refresh()
@@ -111,7 +113,10 @@ object PlayerConnection {
             speed = c.playbackParameters.speed,
             shuffle = c.shuffleModeEnabled,
             repeatMode = c.repeatMode,
-            queue = queue,
+            queue = (0 until c.mediaItemCount).mapNotNull { i ->
+                val mid = c.getMediaItemAt(i).mediaId
+                Library.state.value.track(mid) ?: known[mid]
+            }.also { queue = it },
             index = idx,
         )
     }
@@ -142,6 +147,7 @@ object PlayerConnection {
     fun play(tracks: List<Track>, startIndex: Int = 0, shuffle: Boolean = false) {
         if (tracks.isEmpty()) return
         queue = tracks
+        tracks.forEach { known[it.id] = it }
         _ui.value = _ui.value.copy(error = null, current = tracks[startIndex.coerceIn(tracks.indices)])
         withController { c ->
             c.shuffleModeEnabled = shuffle
@@ -152,12 +158,14 @@ object PlayerConnection {
     }
 
     fun playNext(track: Track) = withController { c ->
+        known[track.id] = track
         if (c.mediaItemCount == 0) { play(listOf(track)); return@withController }
         queue = queue.toMutableList().apply { add((c.currentMediaItemIndex + 1).coerceAtMost(size), track) }
         c.addMediaItem(c.currentMediaItemIndex + 1, track.toMediaItem())
     }
 
     fun addToQueue(track: Track) = withController { c ->
+        known[track.id] = track
         if (c.mediaItemCount == 0) { play(listOf(track)); return@withController }
         queue = queue + track
         c.addMediaItem(track.toMediaItem())
@@ -192,6 +200,24 @@ object PlayerConnection {
             Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
             else -> Player.REPEAT_MODE_OFF
         }
+    }
+
+    /** Mueve un elemento de la cola (al arrastrar). */
+    fun move(from: Int, to: Int) = withController { c ->
+        if (from in 0 until c.mediaItemCount && to in 0 until c.mediaItemCount && from != to) c.moveMediaItem(from, to)
+    }
+
+    /** Quita el elemento en la posición indicada de la cola. */
+    fun removeAt(index: Int) = withController { c ->
+        if (index in 0 until c.mediaItemCount && c.mediaItemCount > 1) c.removeMediaItem(index)
+        refresh()
+    }
+
+    /** Vacía lo que viene después de la pista actual. */
+    fun clearUpcoming() = withController { c ->
+        val cur = c.currentMediaItemIndex
+        if (cur + 1 < c.mediaItemCount) c.removeMediaItems(cur + 1, c.mediaItemCount)
+        refresh()
     }
 
     /** Quita una pista de la cola si estaba (por ejemplo, al borrarla). */
