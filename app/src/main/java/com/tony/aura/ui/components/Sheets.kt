@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.items
+import sh.calvin.reorderable.ReorderableItem
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ContentCut
@@ -462,7 +463,7 @@ fun QueueSheet(onDismiss: () -> Unit) {
                 items(local, key = { it.first }) { (qi, t) ->
                     val pos = local.indexOfFirst { it.first == qi }
                     val isCur = pos == p.index
-                    sh.calvin.reorderable.ReorderableItem(reorder, key = qi, enabled = !isCur) { dragging ->
+                    ReorderableItem(reorder, key = qi, enabled = !isCur) { dragging ->
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
                                 .background(if (dragging) Aura.Slate800 else Color.Transparent)
