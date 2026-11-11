@@ -136,6 +136,8 @@ object MediaTools {
         return sb.toString().trimEnd(';')
     }
 
+    fun runFfmpeg(ctx: Context, args: List<String>, totalMs: Long, onProgress: (Float) -> Unit) = run(ctx, args, totalMs, onProgress)
+
     private fun run(ctx: Context, args: List<String>, totalMs: Long, onProgress: (Float) -> Unit): Pair<Int, String> {
         val pb = ProcessBuilder(listOf(ffmpeg(ctx).absolutePath) + args).redirectErrorStream(true)
         pb.environment().putAll(env(ctx))

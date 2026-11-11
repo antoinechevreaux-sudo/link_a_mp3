@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.FileOpen
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.PhoneAndroid
@@ -226,6 +227,9 @@ fun DownloaderScreen() {
                         { focus.clearFocus(); ed.analyze(ctx) }, Modifier.fillMaxWidth(), Icons.Rounded.Search,
                         enabled = !ed.analyzing && ed.url.isNotBlank(),
                     )
+                    val importFiles = com.tony.aura.ui.components.rememberImportLauncher()
+                    Spacer(Modifier.height(10.dp))
+                    GhostButton("Importar audio o vídeo del teléfono", { importFiles() }, Modifier.fillMaxWidth(), Icons.Rounded.FileOpen)
                     Text(
                         "YouTube, SoundCloud, Instagram, TikTok, X, Vimeo, Bandcamp, podcasts y cientos más.",
                         Modifier.padding(top = 10.dp), color = Aura.Slate400, fontFamily = Jakarta, fontSize = 11.sp,

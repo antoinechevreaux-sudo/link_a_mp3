@@ -90,9 +90,10 @@ fun AuraRoot() {
         player.error?.let { Toast.makeText(ctx, it, Toast.LENGTH_LONG).show() }
     }
 
-    BackHandler(enabled = ui.editClip != null || ui.videoFullscreen || ui.settingsOpen || ui.openPlaylist != null || ui.tab != Tab.HOME) {
+    BackHandler(enabled = ui.editClip != null || ui.mixerOpen || ui.videoFullscreen || ui.settingsOpen || ui.openPlaylist != null || ui.tab != Tab.HOME) {
         when {
             ui.editClip != null -> ui.editClip = null
+            ui.mixerOpen -> ui.mixerOpen = false
             ui.videoFullscreen -> { ui.videoFullscreen = false; ui.tab = Tab.PLAYER }
             ui.settingsOpen -> ui.settingsOpen = false
             ui.openPlaylist != null -> ui.openPlaylist = null
@@ -108,6 +109,11 @@ fun AuraRoot() {
             Box(Modifier.weight(1f).fillMaxWidth()) { ContentArea() }
             BottomNav()
         }
+
+        AnimatedVisibility(
+            visible = ui.mixerOpen,
+            enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut(),
+        ) { com.tony.aura.ui.screens.MixerScreen { ui.mixerOpen = false } }
 
         AnimatedVisibility(
             visible = ui.editClip != null,

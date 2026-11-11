@@ -23,6 +23,8 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.FileOpen
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -62,6 +64,7 @@ fun LibraryScreen() {
     val lib by Library.state.collectAsState()
     val device by DeviceMusic.tracks.collectAsState()
     var creating by remember { mutableStateOf(false) }
+    val importFiles = com.tony.aura.ui.components.rememberImportLauncher()
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 110.dp)) {
         item {
@@ -78,6 +81,8 @@ fun LibraryScreen() {
                     lib.recent.firstOrNull()?.coverUri) { ui.openPlaylist = Special.ALL }
                 CollectionRow("Vídeos", "${lib.tracks.count { it.isVideo }} vídeos", Icons.Rounded.Movie,
                     lib.tracks.firstOrNull { it.isVideo }?.coverUri) { ui.openPlaylist = Special.VIDEOS }
+                CollectionRow("Importar del teléfono", "Audio o vídeo de tus carpetas", Icons.Rounded.FileOpen, null) { importFiles() }
+                CollectionRow("Mezclador", "Varias pistas a la vez, cada una con su volumen", Icons.Rounded.Tune, null) { ui.mixerOpen = true }
                 CollectionRow("En el teléfono", if (DeviceMusic.loaded) "${device.size} canciones" else "Permite el acceso a la música",
                     Icons.Rounded.PhoneAndroid, null) { ui.openPlaylist = Special.DEVICE }
             }

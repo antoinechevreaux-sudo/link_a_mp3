@@ -28,6 +28,8 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.FileOpen
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.Pause
@@ -149,6 +151,7 @@ fun TrackOptionsSheet(track: Track, playlistId: String?, onDismiss: () -> Unit) 
                 Library.removeFromPlaylist(playlist.id, current.id); onDismiss()
             }
             SheetItem(Icons.Rounded.ContentCut, "Editar clip (cortar, recortar, fundidos)") { ui.editClip = current; onDismiss() }
+            SheetItem(Icons.Rounded.Tune, "Añadir al mezclador") { com.tony.aura.edit.Mixer.add(current); ui.mixerOpen = true; onDismiss() }
             if (!current.fromDevice) {
                 SheetItem(Icons.Rounded.Edit, "Editar título, artista y tipo") { ui.editTrack = current; onDismiss() }
                 SheetItem(Icons.Rounded.PhoneAndroid, if (current.deviceUri != null) "Ya está en el dispositivo" else "Guardar en el dispositivo") {
@@ -317,45 +320,86 @@ fun saveTrackToDevice(ctx: Context, track: Track, onResult: (String) -> Unit) {
     }.start()
 }
 
-/** Elegir la pista que sonará de fondo (lluvia, ruido blanco, música suave…). */
+/** Elegir la pista que sonará de fondo (ruido blanco, marrón, mar…). */
 @Composable
-fun AmbientPickerSheet(onDismiss: () -> Unit) {
+fun AmbientPickerSheet(onDismiss: () -> Unit) = TrackPickerSheet(
+    "Ruido de fondo", "Elige un sonido",
+    "Sonará en bucle a la vez que lo que estés escuchando. Consejo: descarga un vídeo de «ruido marrón 10 horas» como MP3.",
+    onDismiss = onDismiss,
+) { Ambient.set(it) }
+
+/** Selector de pistas de la biblioteca y del teléfono, con opción de importar archivos. */
+@Composable
+fun TrackPickerSheet(
+    kicker: String, title: String, hint: String,
+    includeVideos: Boolean = false,
+    onDismiss: () -> Unit,
+    onPick: (Track) -> Unit,
+) {
+    val ui = LocalUi.current
+    val ctx = LocalContext.current
     val lib by Library.state.collectAsState()
     val device by DeviceMusic.tracks.collectAsState()
     var query by remember { mutableStateOf("") }
     val ids = lib.tracks.map { it.id }.toSet()
-    val all = (lib.tracks + device.filter { it.id !in ids }).filter { !it.isVideo }
+    val all = (lib.tracks + device.filter { it.id !in ids }).filter { includeVideos || !it.isVideo }
     val q = query.trim().lowercase()
     val list = if (q.isEmpty()) all else all.filter { q in it.title.lowercase() || q in it.artist.lowercase() }
+    val importer = rememberImportLauncher { imported ->
+        if (imported.isNotEmpty()) { imported.forEach(onPick); ui.toast("${imported.size} importado(s)"); onDismiss() }
+    }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Aura.Elevated,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 12.dp)) {
-            Kicker("Ruido de fondo")
-            Text("Elige un sonido", color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Black, fontSize = 22.sp)
-            Text("Sonará en bucle a la vez que lo que estés escuchando. Consejo: descarga un vídeo de «ruido marrón 10 horas» como MP3.",
-                color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
-            OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("Buscar (ruido, mar, lluvia…)", fontFamily = Jakarta) },
+            Kicker(kicker)
+            Text(title, color = Color.White, fontFamily = Jakarta, fontSize = 22.sp)
+            Text(hint, color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+            OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("Buscar…", fontFamily = Jakarta) },
                 colors = auraFieldColors(), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
+            SheetItem(Icons.Rounded.FileOpen, "Importar del teléfono…", tint = Aura.Brand500) { importer() }
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                if (list.isEmpty()) Text("No hay audios en tu biblioteca todavía.", color = Aura.Slate400, fontFamily = Jakarta,
+                if (list.isEmpty()) Text("No hay nada en tu biblioteca todavía.", color = Aura.Slate400, fontFamily = Jakarta,
                     fontSize = 13.sp, modifier = Modifier.padding(vertical = 20.dp))
                 list.forEach { t ->
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { Ambient.set(t); onDismiss() }.padding(8.dp),
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onPick(t); onDismiss() }.padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Cover(t.coverUri, Modifier.size(42.dp), RoundedCornerShape(10.dp), seed = t.title)
+                        Cover(t.coverUri, Modifier.size(42.dp), RoundedCornerShape(10.dp), t.isVideo, t.title)
                         Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                            Text(t.title, color = Color.White, fontFamily = Jakarta, fontWeight = FontWeight.Bold, fontSize = 14.sp,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(t.artist, color = Aura.Slate400, fontFamily = Jakarta, fontSize = 12.sp, maxLines = 1)
+                            Text(t.title, color = Color.White, fontFamily = Jakarta, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.artist + if (t.durationMs > 0) " · ${formatTime(t.durationMs)}" else "", color = Aura.Slate400,
+                                fontFamily = Jakarta, fontSize = 12.sp, maxLines = 1)
                         }
                     }
                 }
             }
         }
     }
+}
+
+/** Abre el selector de archivos del teléfono (audio y vídeo) e importa lo elegido a Ember. */
+@Composable
+fun rememberImportLauncher(onDone: (List<Track>) -> Unit = {}): () -> Unit {
+    val ctx = LocalContext.current
+    val ui = LocalUi.current
+    val done by androidx.compose.runtime.rememberUpdatedState(onDone)
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        ui.toast("Importando ${uris.size}…")
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        Thread {
+            val res = com.tony.aura.data.Importer.import(ctx.applicationContext, uris)
+            main.post {
+                ui.toast(if (res.size == uris.size) "Importado: ${res.size}" else "Importados ${res.size} de ${uris.size}")
+                done(res)
+            }
+        }.start()
+    }
+    return { launcher.launch(arrayOf("audio/*", "video/*")) }
 }
 
 /** Cuenta atrás del temporizador en formato mm:ss (se actualiza cada segundo). */
